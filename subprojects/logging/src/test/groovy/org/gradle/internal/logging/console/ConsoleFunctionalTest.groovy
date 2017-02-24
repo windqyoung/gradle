@@ -231,7 +231,6 @@ class ConsoleFunctionalTest extends Specification {
         }
 
         then:
-        progressArea.display == [IDLE, IDLE, IDLE, IDLE]
         ConcurrentTestUtil.poll(1, 0.1) {
             assert progressArea.display == [IDLE, IDLE, IDLE, IDLE]
         }
