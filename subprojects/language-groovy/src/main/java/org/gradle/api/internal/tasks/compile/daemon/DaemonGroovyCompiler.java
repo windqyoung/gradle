@@ -22,8 +22,9 @@ import org.gradle.api.internal.tasks.compile.GroovyJavaJointCompileSpec;
 import org.gradle.api.tasks.compile.ForkOptions;
 import org.gradle.api.tasks.compile.GroovyForkOptions;
 import org.gradle.language.base.internal.compile.Compiler;
+import org.gradle.workers.ForkMode;
+import org.gradle.workers.WorkerExecutor;
 import org.gradle.workers.internal.DaemonForkOptions;
-import org.gradle.workers.internal.WorkerFactory;
 
 import java.io.File;
 import java.util.Arrays;
@@ -32,10 +33,17 @@ import java.util.Collection;
 public class DaemonGroovyCompiler extends AbstractDaemonCompiler<GroovyJavaJointCompileSpec> {
     private final static Iterable<String> SHARED_PACKAGES = Arrays.asList("groovy", "org.codehaus.groovy", "groovyjarjarantlr", "groovyjarjarasm", "groovyjarjarcommonscli", "org.apache.tools.ant", "com.sun.tools.javac");
     private final ClassPathRegistry classPathRegistry;
+    private final ForkMode forkMode;
 
-    public DaemonGroovyCompiler(File daemonWorkingDir, Compiler<GroovyJavaJointCompileSpec> delegate, ClassPathRegistry classPathRegistry, WorkerFactory workerFactory) {
-        super(daemonWorkingDir, delegate, workerFactory);
+    public DaemonGroovyCompiler(Compiler<GroovyJavaJointCompileSpec> delegate, ClassPathRegistry classPathRegistry, WorkerExecutor workerExecutor, ForkMode forkMode) {
+        super(delegate, workerExecutor);
         this.classPathRegistry = classPathRegistry;
+        this.forkMode = forkMode;
+    }
+
+    @Override
+    public ForkMode getForkMode() {
+        return forkMode;
     }
 
     @Override
@@ -56,6 +64,6 @@ public class DaemonGroovyCompiler extends AbstractDaemonCompiler<GroovyJavaJoint
         Collection<File> antFiles = classPathRegistry.getClassPath("ANT").getAsFiles();
         Iterable<File> groovyFiles = Iterables.concat(spec.getGroovyClasspath(), antFiles);
         return new DaemonForkOptions(options.getMemoryInitialSize(), options.getMemoryMaximumSize(),
-                options.getJvmArgs(), groovyFiles, SHARED_PACKAGES);
+            options.getJvmArgs(), groovyFiles, SHARED_PACKAGES);
     }
 }

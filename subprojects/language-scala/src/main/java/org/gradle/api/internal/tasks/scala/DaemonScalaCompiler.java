@@ -33,11 +33,11 @@ package org.gradle.api.internal.tasks.scala;
  */
 
 import org.gradle.api.internal.tasks.compile.daemon.AbstractDaemonCompiler;
-import org.gradle.workers.internal.WorkerDaemonFactory;
-import org.gradle.workers.internal.DaemonForkOptions;
 import org.gradle.api.tasks.compile.ForkOptions;
 import org.gradle.api.tasks.scala.ScalaForkOptions;
 import org.gradle.language.base.internal.compile.Compiler;
+import org.gradle.workers.WorkerExecutor;
+import org.gradle.workers.internal.DaemonForkOptions;
 
 import java.io.File;
 import java.util.Arrays;
@@ -47,8 +47,8 @@ public class DaemonScalaCompiler<T extends ScalaJavaJointCompileSpec> extends Ab
             Arrays.asList("scala", "com.typesafe.zinc", "xsbti", "com.sun.tools.javac", "sbt");
     private final Iterable<File> zincClasspath;
 
-    public DaemonScalaCompiler(File daemonWorkingDir, Compiler<T> delegate, WorkerDaemonFactory workerDaemonFactory, Iterable<File> zincClasspath) {
-        super(daemonWorkingDir, delegate, workerDaemonFactory);
+    public DaemonScalaCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor, Iterable<File> zincClasspath) {
+        super(delegate, workerExecutor);
         this.zincClasspath = zincClasspath;
     }
 
@@ -65,7 +65,7 @@ public class DaemonScalaCompiler<T extends ScalaJavaJointCompileSpec> extends Ab
     private DaemonForkOptions createScalaForkOptions(T spec) {
         ScalaForkOptions options = spec.getScalaCompileOptions().getForkOptions();
         return new DaemonForkOptions(options.getMemoryInitialSize(), options.getMemoryMaximumSize(),
-                options.getJvmArgs(), zincClasspath, SHARED_PACKAGES);
+            options.getJvmArgs(), zincClasspath, SHARED_PACKAGES);
     }
 }
 

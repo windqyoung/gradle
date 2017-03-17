@@ -15,74 +15,83 @@
  */
 package org.gradle.api.internal.tasks.compile.daemon;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.gradle.api.Action;
 import org.gradle.api.tasks.WorkResult;
 import org.gradle.internal.UncheckedException;
 import org.gradle.language.base.internal.compile.CompileSpec;
 import org.gradle.language.base.internal.compile.Compiler;
+import org.gradle.process.JavaForkOptions;
+import org.gradle.workers.ForkMode;
+import org.gradle.workers.WorkerConfiguration;
+import org.gradle.workers.WorkerExecutor;
 import org.gradle.workers.internal.DaemonForkOptions;
 import org.gradle.workers.internal.DefaultWorkResult;
-import org.gradle.workers.internal.WorkSpec;
-import org.gradle.workers.internal.Worker;
-import org.gradle.workers.internal.WorkerFactory;
-import org.gradle.workers.internal.WorkerProtocol;
+import org.gradle.workers.internal.WorkerConfigurationInternal;
 
-import java.io.File;
+import java.io.Serializable;
 
 public abstract class AbstractDaemonCompiler<T extends CompileSpec> implements Compiler<T> {
     private final Compiler<T> delegate;
-    private final WorkerFactory workerFactory;
-    private final File daemonWorkingDir;
+    private final WorkerExecutor workerExecutor;
 
-    public AbstractDaemonCompiler(File daemonWorkingDir, Compiler<T> delegate, WorkerFactory workerFactory) {
-        this.daemonWorkingDir = daemonWorkingDir;
+    public AbstractDaemonCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor) {
         this.delegate = delegate;
-        this.workerFactory = workerFactory;
-    }
-
-    public Compiler<T> getDelegate() {
-        return delegate;
-    }
-
-    @Override
-    public WorkResult execute(T spec) {
-        DaemonForkOptions daemonForkOptions = toDaemonOptions(spec);
-        Worker<WorkerCompileSpec<?>> worker = workerFactory.getWorker(CompilerDaemonServer.class, daemonWorkingDir, daemonForkOptions);
-        DefaultWorkResult result = worker.execute(new WorkerCompileSpec<T>(delegate, spec));
-        if (result.isSuccess()) {
-            return result;
-        }
-        throw UncheckedException.throwAsUncheckedException(result.getException());
+        this.workerExecutor = workerExecutor;
     }
 
     protected abstract DaemonForkOptions toDaemonOptions(T spec);
 
-    private static class WorkerCompileSpec<T extends CompileSpec> implements WorkSpec {
-        private final Compiler<T> compiler;
-        private final T spec;
+    protected ForkMode getForkMode() {
+        return ForkMode.ALWAYS;
+    }
 
-        WorkerCompileSpec(Compiler<T> compiler, T spec) {
-            this.compiler = compiler;
-            this.spec = spec;
-        }
-
-        @Override
-        public String getDisplayName() {
-            return compiler.getClass().getName();
-        }
-
-        public DefaultWorkResult compile() {
-            return new DefaultWorkResult(compiler.execute(spec).getDidWork(), null);
+    @Override
+    public WorkResult execute(final T spec) {
+        final DaemonForkOptions daemonForkOptions = toDaemonOptions(spec);
+        workerExecutor.submit(CompilerWorkerRunnable.class, new Action<WorkerConfiguration>() {
+            @Override
+            public void execute(WorkerConfiguration config) {
+                config.setForkMode(getForkMode());
+                config.forkOptions(new Action<JavaForkOptions>() {
+                    @Override
+                    public void execute(JavaForkOptions forkOptions) {
+                        forkOptions.setJvmArgs(daemonForkOptions.getJvmArgs());
+                        forkOptions.setMinHeapSize(daemonForkOptions.getMinHeapSize());
+                        forkOptions.setMaxHeapSize(daemonForkOptions.getMaxHeapSize());
+                    }
+                });
+                config.setClasspath(daemonForkOptions.getClasspath());
+                config.setParams((Serializable) delegate, spec);
+                config.setStrictClasspath(true);
+                ((WorkerConfigurationInternal) config).setSharedPackages(daemonForkOptions.getSharedPackages());
+            }
+        });
+        try {
+            workerExecutor.await();
+            return new DefaultWorkResult(true, null);
+        } catch (Exception ex) {
+            throw UncheckedException.throwAsUncheckedException(ex);
         }
     }
 
-    public static class CompilerDaemonServer implements WorkerProtocol<WorkerCompileSpec<?>> {
+    @VisibleForTesting
+    public Compiler<T> getDelegate() {
+        return delegate;
+    }
+
+    public static class CompilerWorkerRunnable<T extends CompileSpec> implements Runnable {
+        private final Compiler<T> compiler;
+        private final T compileSpec;
+
+        public CompilerWorkerRunnable(Compiler<T> compiler, T compileSpec) {
+            this.compiler = compiler;
+            this.compileSpec = compileSpec;
+        }
+
         @Override
-        public DefaultWorkResult execute(WorkerCompileSpec<?> spec) {
-            try {
-                return spec.compile();
-            } catch (Throwable t) {
-                return new DefaultWorkResult(true, t);
-            }
+        public void run() {
+            compiler.execute(compileSpec);
         }
     }
 }

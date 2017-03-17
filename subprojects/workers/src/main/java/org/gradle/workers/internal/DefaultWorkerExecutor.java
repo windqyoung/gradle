@@ -16,6 +16,7 @@
 
 package org.gradle.workers.internal;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -137,6 +138,7 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
         }
     }
 
+    @VisibleForTesting
     DaemonForkOptions getDaemonForkOptions(Class<?> actionClass, WorkerConfiguration configuration) {
         Iterable<Class<?>> paramTypes = CollectionUtils.collect(configuration.getParams(), new Transformer<Class<?>, Object>() {
             @Override
@@ -144,28 +146,33 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
                 return o.getClass();
             }
         });
-        return toDaemonOptions(actionClass, paramTypes, configuration.getForkOptions(), configuration.getClasspath());
+        return toDaemonOptions(actionClass, paramTypes, (WorkerConfigurationInternal) configuration);
     }
 
-    private DaemonForkOptions toDaemonOptions(Class<?> actionClass, Iterable<Class<?>> paramClasses, JavaForkOptions forkOptions, Iterable<File> classpath) {
+    private DaemonForkOptions toDaemonOptions(Class<?> actionClass, Iterable<Class<?>> paramClasses, WorkerConfigurationInternal configuration) {
         ImmutableSet.Builder<File> classpathBuilder = ImmutableSet.builder();
         ImmutableSet.Builder<String> sharedPackagesBuilder = ImmutableSet.builder();
 
-        sharedPackagesBuilder.add("javax.inject");
-
+        Iterable<File> classpath = configuration.getClasspath();
         if (classpath != null) {
             classpathBuilder.addAll(classpath);
         }
 
-        addVisibilityFor(actionClass, classpathBuilder, sharedPackagesBuilder, true);
+        sharedPackagesBuilder.add("javax.inject");
 
-        for (Class<?> paramClass : paramClasses) {
-            addVisibilityFor(paramClass, classpathBuilder, sharedPackagesBuilder, false);
+        if (!configuration.isStrictClasspath()) {
+            // Automatically enrich classpath and shared packages from action and parameters classes
+            addVisibilityFor(actionClass, classpathBuilder, sharedPackagesBuilder, true);
+            for (Class<?> paramClass : paramClasses) {
+                addVisibilityFor(paramClass, classpathBuilder, sharedPackagesBuilder, false);
+            }
         }
 
+        sharedPackagesBuilder.addAll(configuration.getSharedPackages());
+
+        JavaForkOptions forkOptions = configuration.getForkOptions();
         Iterable<File> daemonClasspath = classpathBuilder.build();
         Iterable<String> daemonSharedPackages = sharedPackagesBuilder.build();
-
         return new DaemonForkOptions(forkOptions.getMinHeapSize(), forkOptions.getMaxHeapSize(), forkOptions.getAllJvmArgs(), daemonClasspath, daemonSharedPackages);
     }
 

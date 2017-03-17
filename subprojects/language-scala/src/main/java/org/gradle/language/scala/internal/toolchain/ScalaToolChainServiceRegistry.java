@@ -19,9 +19,9 @@ package org.gradle.language.scala.internal.toolchain;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.artifacts.dsl.DependencyHandler;
 import org.gradle.api.internal.GradleInternal;
-import org.gradle.workers.internal.WorkerDaemonFactory;
 import org.gradle.internal.service.ServiceRegistration;
 import org.gradle.internal.service.scopes.PluginServiceRegistry;
+import org.gradle.workers.WorkerExecutor;
 
 public class ScalaToolChainServiceRegistry implements PluginServiceRegistry {
 
@@ -48,8 +48,8 @@ public class ScalaToolChainServiceRegistry implements PluginServiceRegistry {
 
 
     private static class ProjectScopeCompileServices {
-        ScalaToolChainInternal createScalaToolChain(GradleInternal gradle, WorkerDaemonFactory workerDaemonFactory, ConfigurationContainer configurationContainer, DependencyHandler dependencyHandler) {
-            return new DownloadingScalaToolChain(gradle.getGradleUserHomeDir(), gradle.getRootProject().getProjectDir(), workerDaemonFactory, configurationContainer, dependencyHandler);
+        ScalaToolChainInternal createScalaToolChain(GradleInternal gradle, WorkerExecutor workerExecutor, ConfigurationContainer configurationContainer, DependencyHandler dependencyHandler) {
+            return new DownloadingScalaToolChain(gradle.getGradleUserHomeDir(), workerExecutor, configurationContainer, dependencyHandler);
         }
     }
 }

@@ -53,6 +53,29 @@ public interface WorkerConfiguration extends Describable, ActionConfiguration {
     Iterable<File> getClasspath();
 
     /**
+     * Gets the strictness of the classpath configuration.
+     * Defaults to {@literal false}.
+     * See {@link #setStrictClasspath(boolean)}
+     *
+     * @since 3.6
+     */
+    boolean isStrictClasspath();
+
+    /**
+     * Sets the classpath configuration to be strict.
+     *
+     * By default the classpath configuration is <strong>not</strong> strict.
+     * {@link #getClasspath()} will be enriched from the worker action and its parameters classes.
+     *
+     * If set to {@literal true}, the latter doesn't happen and you are responsible to properly define the worker classpath
+     * using {@link #classpath(Iterable)}.
+     *
+     * @param strictClasspath if strictness of the classpath configuration
+     * @since 3.6
+     */
+    void setStrictClasspath(boolean strictClasspath);
+
+    /**
      * @return the forking mode for this worker, see {@link ForkMode}, defaults to {@link ForkMode#AUTO}
      */
     ForkMode getForkMode();

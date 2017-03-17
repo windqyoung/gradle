@@ -17,27 +17,22 @@
 package org.gradle.api.internal.tasks.compile;
 
 import org.gradle.api.internal.ClassPathRegistry;
-import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.internal.tasks.compile.daemon.DaemonGroovyCompiler;
 import org.gradle.api.tasks.compile.GroovyCompileOptions;
 import org.gradle.language.base.internal.compile.Compiler;
 import org.gradle.language.base.internal.compile.CompilerFactory;
-import org.gradle.workers.internal.InProcessWorkerFactory;
-import org.gradle.workers.internal.WorkerFactory;
-import org.gradle.workers.internal.WorkerDaemonFactory;
+import org.gradle.workers.ForkMode;
+import org.gradle.workers.WorkerExecutor;
 
 public class GroovyCompilerFactory implements CompilerFactory<GroovyJavaJointCompileSpec> {
-    private final ProjectInternal project;
     private final JavaCompilerFactory javaCompilerFactory;
-    private final WorkerDaemonFactory workerDaemonFactory;
-    private final InProcessWorkerFactory inProcessWorkerFactory;
+    private final ClassPathRegistry classPathRegistry;
+    private final WorkerExecutor workerExecutor;
 
-    public GroovyCompilerFactory(ProjectInternal project, JavaCompilerFactory javaCompilerFactory, WorkerDaemonFactory workerDaemonFactory,
-                                 InProcessWorkerFactory inProcessWorkerFactory) {
-        this.project = project;
+    public GroovyCompilerFactory(JavaCompilerFactory javaCompilerFactory, ClassPathRegistry classPathRegistry, WorkerExecutor workerExecutor) {
         this.javaCompilerFactory = javaCompilerFactory;
-        this.workerDaemonFactory = workerDaemonFactory;
-        this.inProcessWorkerFactory = inProcessWorkerFactory;
+        this.classPathRegistry = classPathRegistry;
+        this.workerExecutor = workerExecutor;
     }
 
     @Override
@@ -45,13 +40,8 @@ public class GroovyCompilerFactory implements CompilerFactory<GroovyJavaJointCom
         GroovyCompileOptions groovyOptions = spec.getGroovyCompileOptions();
         Compiler<JavaCompileSpec> javaCompiler = javaCompilerFactory.createForJointCompilation(spec.getClass());
         Compiler<GroovyJavaJointCompileSpec> groovyCompiler = new ApiGroovyCompiler(javaCompiler);
-        WorkerFactory workerFactory;
-        if (groovyOptions.isFork()) {
-            workerFactory = workerDaemonFactory;
-        } else {
-            workerFactory = inProcessWorkerFactory;
-        }
-        groovyCompiler = new DaemonGroovyCompiler(project.getRootProject().getProjectDir(), groovyCompiler, project.getServices().get(ClassPathRegistry.class), workerFactory);
+        ForkMode forkMode = groovyOptions.isFork() ? ForkMode.ALWAYS : ForkMode.NEVER;
+        groovyCompiler = new DaemonGroovyCompiler(groovyCompiler, classPathRegistry, workerExecutor, forkMode);
         return new NormalizingGroovyCompiler(groovyCompiler);
     }
 }
