@@ -16,16 +16,15 @@
 package org.gradle.api.internal.tasks.compile.daemon;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.gradle.api.Action;
 import org.gradle.api.tasks.WorkResult;
 import org.gradle.internal.UncheckedException;
 import org.gradle.language.base.internal.compile.CompileSpec;
 import org.gradle.language.base.internal.compile.Compiler;
-import org.gradle.process.JavaForkOptions;
 import org.gradle.workers.ForkMode;
 import org.gradle.workers.WorkerConfiguration;
 import org.gradle.workers.WorkerExecutor;
-import org.gradle.workers.internal.DaemonForkOptions;
 import org.gradle.workers.internal.DefaultWorkResult;
 import org.gradle.workers.internal.WorkerConfigurationInternal;
 
@@ -34,37 +33,25 @@ import java.io.Serializable;
 public abstract class AbstractDaemonCompiler<T extends CompileSpec> implements Compiler<T> {
     private final Compiler<T> delegate;
     private final WorkerExecutor workerExecutor;
+    protected final ForkMode forkMode;
 
-    public AbstractDaemonCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor) {
+    public AbstractDaemonCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor, ForkMode forkMode) {
+        Preconditions.checkArgument(delegate instanceof Serializable, "Delegate compiler must be Serializable");
         this.delegate = delegate;
         this.workerExecutor = workerExecutor;
+        this.forkMode = forkMode;
     }
 
-    protected abstract DaemonForkOptions toDaemonOptions(T spec);
-
-    protected ForkMode getForkMode() {
-        return ForkMode.ALWAYS;
-    }
+    protected abstract void applyWorkerConfiguration(T spec, WorkerConfigurationInternal config);
 
     @Override
     public WorkResult execute(final T spec) {
-        final DaemonForkOptions daemonForkOptions = toDaemonOptions(spec);
         workerExecutor.submit(CompilerWorkerRunnable.class, new Action<WorkerConfiguration>() {
             @Override
             public void execute(WorkerConfiguration config) {
-                config.setForkMode(getForkMode());
-                config.forkOptions(new Action<JavaForkOptions>() {
-                    @Override
-                    public void execute(JavaForkOptions forkOptions) {
-                        forkOptions.setJvmArgs(daemonForkOptions.getJvmArgs());
-                        forkOptions.setMinHeapSize(daemonForkOptions.getMinHeapSize());
-                        forkOptions.setMaxHeapSize(daemonForkOptions.getMaxHeapSize());
-                    }
-                });
-                config.setClasspath(daemonForkOptions.getClasspath());
+                config.setForkMode(forkMode);
                 config.setParams((Serializable) delegate, spec);
-                config.setStrictClasspath(true);
-                ((WorkerConfigurationInternal) config).setSharedPackages(daemonForkOptions.getSharedPackages());
+                applyWorkerConfiguration(spec, (WorkerConfigurationInternal) config);
             }
         });
         try {

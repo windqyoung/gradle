@@ -15,27 +15,36 @@
  */
 package org.gradle.api.internal.tasks.compile;
 
+import org.gradle.api.Action;
 import org.gradle.api.internal.tasks.compile.daemon.AbstractDaemonCompiler;
 import org.gradle.api.tasks.compile.ForkOptions;
 import org.gradle.language.base.internal.compile.Compiler;
+import org.gradle.process.JavaForkOptions;
+import org.gradle.workers.ForkMode;
 import org.gradle.workers.WorkerExecutor;
-import org.gradle.workers.internal.DaemonForkOptions;
+import org.gradle.workers.internal.WorkerConfigurationInternal;
 
-import java.io.File;
 import java.util.Collections;
 
 public class DaemonJavaCompiler extends AbstractDaemonCompiler<JavaCompileSpec> {
     private static final Iterable<String> SHARED_PACKAGES = Collections.singleton("com.sun.tools.javac");
 
-    public DaemonJavaCompiler(Compiler<JavaCompileSpec> delegate, WorkerExecutor workerExecutor) {
-        super(delegate, workerExecutor);
+    public DaemonJavaCompiler(Compiler<JavaCompileSpec> delegate, WorkerExecutor workerExecutor, ForkMode forkMode) {
+        super(delegate, workerExecutor, forkMode);
     }
 
     @Override
-    protected DaemonForkOptions toDaemonOptions(JavaCompileSpec spec) {
-        ForkOptions forkOptions = spec.getCompileOptions().getForkOptions();
-        return new DaemonForkOptions(
-                forkOptions.getMemoryInitialSize(), forkOptions.getMemoryMaximumSize(), forkOptions.getJvmArgs(),
-                Collections.<File>emptyList(), SHARED_PACKAGES);
+    protected void applyWorkerConfiguration(JavaCompileSpec spec, WorkerConfigurationInternal config) {
+        final ForkOptions forkOptions = spec.getCompileOptions().getForkOptions();
+        config.forkOptions(new Action<JavaForkOptions>() {
+            @Override
+            public void execute(JavaForkOptions javaForkOptions) {
+                javaForkOptions.setJvmArgs(forkOptions.getJvmArgs());
+                javaForkOptions.setMinHeapSize(forkOptions.getMemoryInitialSize());
+                javaForkOptions.setMaxHeapSize(forkOptions.getMemoryMaximumSize());
+            }
+        });
+        config.setStrictClasspath(true);
+        config.setSharedPackages(SHARED_PACKAGES);
     }
 }
