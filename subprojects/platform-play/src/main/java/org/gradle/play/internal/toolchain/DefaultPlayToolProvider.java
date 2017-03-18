@@ -63,13 +63,13 @@ class DefaultPlayToolProvider implements PlayToolProvider {
     public <T extends CompileSpec> Compiler<T> newCompiler(Class<T> spec) {
         if (TwirlCompileSpec.class.isAssignableFrom(spec)) {
             TwirlCompiler twirlCompiler = TwirlCompilerFactory.create(targetPlatform);
-            return cast(new DaemonPlayCompiler<TwirlCompileSpec>(twirlCompiler, workerExecutor, twirlClasspath, twirlCompiler.getClassLoaderPackages()));
+            return cast(new WorkerDaemonPlayCompiler<TwirlCompileSpec>(twirlCompiler, workerExecutor, twirlClasspath, twirlCompiler.getClassLoaderPackages()));
         } else if (RoutesCompileSpec.class.isAssignableFrom(spec)) {
             RoutesCompiler routesCompiler = RoutesCompilerFactory.create(targetPlatform);
-            return cast(new DaemonPlayCompiler<RoutesCompileSpec>(routesCompiler, workerExecutor, routesClasspath, routesCompiler.getClassLoaderPackages()));
+            return cast(new WorkerDaemonPlayCompiler<RoutesCompileSpec>(routesCompiler, workerExecutor, routesClasspath, routesCompiler.getClassLoaderPackages()));
         } else if (JavaScriptCompileSpec.class.isAssignableFrom(spec)) {
             GoogleClosureCompiler javaScriptCompiler = new GoogleClosureCompiler();
-            return cast(new DaemonPlayCompiler<JavaScriptCompileSpec>(javaScriptCompiler, workerExecutor, javaScriptClasspath, javaScriptCompiler.getClassLoaderPackages()));
+            return cast(new WorkerDaemonPlayCompiler<JavaScriptCompileSpec>(javaScriptCompiler, workerExecutor, javaScriptClasspath, javaScriptCompiler.getClassLoaderPackages()));
         }
         throw new IllegalArgumentException(String.format("Cannot create Compiler for unsupported CompileSpec type '%s'", spec.getSimpleName()));
     }

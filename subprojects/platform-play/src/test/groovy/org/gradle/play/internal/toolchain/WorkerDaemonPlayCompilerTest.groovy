@@ -24,7 +24,7 @@ import org.gradle.workers.WorkerExecutor
 import org.gradle.workers.internal.DefaultWorkerConfiguration
 import spock.lang.Specification
 
-class DaemonPlayCompilerTest extends Specification {
+class WorkerDaemonPlayCompilerTest extends Specification {
 
     def delegate = Mock(Compiler)
     def workerExecutor = Mock(WorkerExecutor)
@@ -40,7 +40,7 @@ class DaemonPlayCompilerTest extends Specification {
         given:
         def classpath = someClasspath()
         def packages = ["foo", "bar"]
-        def compiler = new DaemonPlayCompiler(delegate, workerExecutor, classpath, packages)
+        def compiler = new WorkerDaemonPlayCompiler(delegate, workerExecutor, classpath, packages)
         when:
         def config = new DefaultWorkerConfiguration(Mock(FileResolver))
         compiler.applyWorkerConfiguration(spec, config)
@@ -51,7 +51,7 @@ class DaemonPlayCompilerTest extends Specification {
 
     def "applies fork settings to worker daemon configuration"() {
         given:
-        def compiler = new DaemonPlayCompiler(delegate, workerExecutor, someClasspath(), [])
+        def compiler = new WorkerDaemonPlayCompiler(delegate, workerExecutor, someClasspath(), [])
         when:
         1 * forkOptions.getMemoryInitialSize() >> "256m"
         1 * forkOptions.getMemoryMaximumSize() >> "512m"

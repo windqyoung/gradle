@@ -52,14 +52,14 @@ public class DefaultJavaCompilerFactory implements JavaCompilerFactory {
             if (jointCompilation) {
                 return new CommandLineJavaCompiler();
             } else {
-                return new DaemonJavaCompiler(new CommandLineJavaCompiler(), workerExecutor, ForkMode.NEVER);
+                return new WorkerJavaCompiler(new CommandLineJavaCompiler(), workerExecutor, ForkMode.NEVER);
             }
         }
 
         Compiler<JavaCompileSpec> compiler = new JdkJavaCompiler(javaHomeBasedJavaCompilerFactory);
         if (!jointCompilation) {
             ForkMode forkMode = ForkingJavaCompileSpec.class.isAssignableFrom(type) ? ForkMode.ALWAYS : ForkMode.NEVER;
-            return new DaemonJavaCompiler(compiler, workerExecutor, forkMode);
+            return new WorkerJavaCompiler(compiler, workerExecutor, forkMode);
         }
 
         return compiler;

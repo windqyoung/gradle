@@ -30,7 +30,7 @@ class DefaultJavaCompilerFactoryTest extends Specification {
         expect:
         def compiler = factory.create(JavaCompileSpec.class)
         compiler instanceof NormalizingJavaCompiler
-        compiler.delegate instanceof DaemonJavaCompiler
+        compiler.delegate instanceof WorkerJavaCompiler
         compiler.delegate.forkMode == ForkMode.NEVER
         compiler.delegate.delegate instanceof JdkJavaCompiler
     }
@@ -45,7 +45,7 @@ class DefaultJavaCompilerFactoryTest extends Specification {
         expect:
         def compiler = factory.create(TestCommandLineJavaSpec.class)
         compiler instanceof NormalizingJavaCompiler
-        compiler.delegate instanceof DaemonJavaCompiler
+        compiler.delegate instanceof WorkerJavaCompiler
         compiler.delegate.forkMode == ForkMode.NEVER
         compiler.delegate.delegate instanceof CommandLineJavaCompiler
     }
@@ -60,7 +60,7 @@ class DefaultJavaCompilerFactoryTest extends Specification {
         expect:
         def compiler = factory.create(TestForkingJavaCompileSpec)
         compiler instanceof NormalizingJavaCompiler
-        compiler.delegate instanceof DaemonJavaCompiler
+        compiler.delegate instanceof WorkerJavaCompiler
         compiler.delegate.forkMode == ForkMode.ALWAYS
         compiler.delegate.delegate instanceof JdkJavaCompiler
     }

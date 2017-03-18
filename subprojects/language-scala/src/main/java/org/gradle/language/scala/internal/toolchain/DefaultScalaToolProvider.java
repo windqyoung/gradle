@@ -16,9 +16,9 @@
 
 package org.gradle.language.scala.internal.toolchain;
 
-import org.gradle.api.internal.tasks.scala.DaemonScalaCompiler;
 import org.gradle.api.internal.tasks.scala.NormalizingScalaCompiler;
 import org.gradle.api.internal.tasks.scala.ScalaJavaJointCompileSpec;
+import org.gradle.api.internal.tasks.scala.WorkerDaemonScalaCompiler;
 import org.gradle.api.internal.tasks.scala.ZincScalaCompiler;
 import org.gradle.language.base.internal.compile.CompileSpec;
 import org.gradle.language.base.internal.compile.Compiler;
@@ -49,7 +49,7 @@ public class DefaultScalaToolProvider implements ToolProvider {
     public <T extends CompileSpec> org.gradle.language.base.internal.compile.Compiler<T> newCompiler(Class<T> spec) {
         if (ScalaJavaJointCompileSpec.class.isAssignableFrom(spec)) {
             Compiler<ScalaJavaJointCompileSpec> scalaCompiler = new ZincScalaCompiler(resolvedScalaClasspath, resolvedZincClasspath, gradleUserHomeDir);
-            return (Compiler<T>) new NormalizingScalaCompiler(new DaemonScalaCompiler<ScalaJavaJointCompileSpec>(scalaCompiler, workerExecutor, resolvedZincClasspath));
+            return (Compiler<T>) new NormalizingScalaCompiler(new WorkerDaemonScalaCompiler<ScalaJavaJointCompileSpec>(scalaCompiler, workerExecutor, resolvedZincClasspath));
         }
         throw new IllegalArgumentException(String.format("Cannot create Compiler for unsupported CompileSpec type '%s'", spec.getSimpleName()));
     }

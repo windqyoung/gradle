@@ -32,11 +32,11 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 
-public class DaemonGroovyCompiler extends AbstractDaemonCompiler<GroovyJavaJointCompileSpec> {
+public class WorkerGroovyCompiler extends AbstractWorkerCompiler<GroovyJavaJointCompileSpec> {
     private final static Iterable<String> SHARED_PACKAGES = Arrays.asList("groovy", "org.codehaus.groovy", "groovyjarjarantlr", "groovyjarjarasm", "groovyjarjarcommonscli", "org.apache.tools.ant", "com.sun.tools.javac");
     private final ClassPathRegistry classPathRegistry;
 
-    public DaemonGroovyCompiler(Compiler<GroovyJavaJointCompileSpec> delegate, ClassPathRegistry classPathRegistry, WorkerExecutor workerExecutor, ForkMode forkMode) {
+    public WorkerGroovyCompiler(Compiler<GroovyJavaJointCompileSpec> delegate, ClassPathRegistry classPathRegistry, WorkerExecutor workerExecutor, ForkMode forkMode) {
         super(delegate, workerExecutor, forkMode);
         this.classPathRegistry = classPathRegistry;
     }

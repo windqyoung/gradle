@@ -30,12 +30,12 @@ import org.gradle.workers.internal.WorkerConfigurationInternal;
 
 import java.io.Serializable;
 
-public abstract class AbstractDaemonCompiler<T extends CompileSpec> implements Compiler<T> {
+public abstract class AbstractWorkerCompiler<T extends CompileSpec> implements Compiler<T> {
     private final Compiler<T> delegate;
     private final WorkerExecutor workerExecutor;
     protected final ForkMode forkMode;
 
-    public AbstractDaemonCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor, ForkMode forkMode) {
+    public AbstractWorkerCompiler(Compiler<T> delegate, WorkerExecutor workerExecutor, ForkMode forkMode) {
         Preconditions.checkArgument(delegate instanceof Serializable, "Delegate compiler must be Serializable");
         this.delegate = delegate;
         this.workerExecutor = workerExecutor;
