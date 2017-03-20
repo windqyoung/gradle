@@ -33,7 +33,7 @@ public class DefaultWorkerConfiguration extends DefaultActionConfiguration imple
     private ForkMode forkMode = ForkMode.AUTO;
     private List<File> classpath = Lists.newArrayList();
     private List<String> sharedPackages = Lists.newArrayList();
-    private boolean scriptClasspath;
+    private boolean strictClasspath;
     private String displayName;
 
     public DefaultWorkerConfiguration(FileResolver fileResolver) {
@@ -103,11 +103,11 @@ public class DefaultWorkerConfiguration extends DefaultActionConfiguration imple
 
     @Override
     public boolean isStrictClasspath() {
-        return scriptClasspath;
+        return strictClasspath;
     }
 
     @Override
     public void setStrictClasspath(boolean strictClasspath) {
-        this.scriptClasspath = strictClasspath;
+        this.strictClasspath = strictClasspath;
     }
 }
