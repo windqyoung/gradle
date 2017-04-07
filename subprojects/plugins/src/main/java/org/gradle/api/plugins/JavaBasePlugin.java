@@ -42,6 +42,7 @@ import org.gradle.api.reporting.ReportingExtension;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
+import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.compile.AbstractCompile;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
@@ -169,9 +170,11 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
                 return sourceSet.getCompileClasspath();
             }
         });
+        final File classesDir = new File(target.getBuildDir(), "classes/" + javaSourceSet.getName() + "/" + sourceSet.getName());
+        sourceSet.getOutput().addClassesDir(javaSourceSet, classesDir);
         conventionMapping.map("destinationDir", new Callable<Object>() {
             public Object call() throws Exception {
-                return sourceSet.getOutput().getClassesDir();
+                return classesDir;
             }
         });
     }
@@ -187,15 +190,22 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
         resourcesTask.from(resourceSet);
     }
 
-    private void createBinaryLifecycleTask(SourceSet sourceSet, Project target) {
+    private void createBinaryLifecycleTask(final SourceSet sourceSet, Project target) {
         sourceSet.compiledBy(sourceSet.getClassesTaskName());
 
-        Task binaryLifecycleTask = target.task(sourceSet.getClassesTaskName());
-        binaryLifecycleTask.setGroup(LifecycleBasePlugin.BUILD_GROUP);
-        binaryLifecycleTask.setDescription("Assembles " + sourceSet.getOutput() + ".");
-        binaryLifecycleTask.dependsOn(sourceSet.getOutput().getDirs());
-        binaryLifecycleTask.dependsOn(sourceSet.getCompileJavaTaskName());
-        binaryLifecycleTask.dependsOn(sourceSet.getProcessResourcesTaskName());
+        Task classesTask = target.getTasks().create(sourceSet.getClassesTaskName(), Sync.class, new Action<Sync>() {
+            @Override
+            public void execute(Sync sync) {
+                sync.from(sourceSet.getOutput().getClassesDirs());
+                sync.into(sourceSet.getOutput().getClassesDir());
+            }
+        });
+
+        classesTask.setGroup(LifecycleBasePlugin.BUILD_GROUP);
+        classesTask.setDescription("Assembles " + sourceSet.getOutput() + ".");
+        classesTask.dependsOn(sourceSet.getOutput().getDirs());
+        classesTask.dependsOn(sourceSet.getCompileJavaTaskName());
+        classesTask.dependsOn(sourceSet.getProcessResourcesTaskName());
     }
 
     private void attachTasksToBinary(ClassDirectoryBinarySpecInternal binary, SourceSet sourceSet, Project target) {
@@ -282,7 +292,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
 
     }
 
-    public void configureForSourceSet(final SourceSet sourceSet, AbstractCompile compile) {
+    public void configureForSourceSet(final SourceSet sourceSet, SourceDirectorySet sourceDirectorySet, AbstractCompile compile, Project target) {
         ConventionMapping conventionMapping;
         compile.setDescription("Compiles the " + sourceSet.getJava() + ".");
         conventionMapping = compile.getConventionMapping();
@@ -292,9 +302,11 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
                 return sourceSet.getCompileClasspath();
             }
         });
+        final File classesDir = new File(target.getBuildDir(), "classes/" + sourceDirectorySet.getName() + "/" + sourceSet.getName());
+        sourceSet.getOutput().addClassesDir(sourceDirectorySet, classesDir);
         conventionMapping.map("destinationDir", new Callable<Object>() {
             public Object call() throws Exception {
-                return sourceSet.getOutput().getClassesDir();
+                return classesDir;
             }
         });
     }

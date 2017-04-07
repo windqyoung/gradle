@@ -17,6 +17,7 @@
 package org.gradle.api.tasks;
 
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.SourceDirectorySet;
 
 import java.io.File;
 import java.util.Map;
@@ -97,6 +98,10 @@ public interface SourceSetOutput extends FileCollection {
      * @param classesDir the classes dir. Should not be null.
      */
     void setClassesDir(Object classesDir);
+
+    void addClassesDir(SourceDirectorySet sourceDirectorySet, Object classesDir);
+
+    FileCollection getClassesDirs();
 
     /**
      * Returns the output directory for resources

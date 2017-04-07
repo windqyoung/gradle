@@ -17,6 +17,7 @@
 package org.gradle.api.internal.tasks;
 
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.internal.file.CompositeFileCollection;
 import org.gradle.api.internal.file.FileResolver;
 import org.gradle.api.internal.file.collections.DefaultConfigurableFileCollection;
@@ -24,7 +25,7 @@ import org.gradle.api.internal.file.collections.FileCollectionResolveContext;
 import org.gradle.api.tasks.SourceSetOutput;
 
 import java.io.File;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -33,6 +34,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
     private Object classesDir;
     private Object resourcesDir;
     private final DefaultConfigurableFileCollection dirs;
+    private final DefaultConfigurableFileCollection classesDirs;
     private final FileResolver fileResolver;
 
     public DefaultSourceSetOutput(String sourceSetDisplayName, FileResolver fileResolver, TaskResolver taskResolver) {
@@ -48,6 +50,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
             }
         });
         dirs = new DefaultConfigurableFileCollection("dirs", fileResolver, taskResolver);
+        classesDirs = new DefaultConfigurableFileCollection("classesDir", fileResolver, taskResolver);
     }
 
     @Override
@@ -71,6 +74,16 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
         this.classesDir = classesDir;
     }
 
+    @Override
+    public void addClassesDir(SourceDirectorySet sourceDirectorySet, Object classesDir) {
+        classesDirs.from(classesDir);
+    }
+
+    @Override
+    public FileCollection getClassesDirs() {
+        return classesDirs;
+    }
+
     public File getResourcesDir() {
         if (resourcesDir == null) {
             return null;
@@ -87,7 +100,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
     }
 
     public void dir(Object dir) {
-        this.dir(new HashMap<String, Object>(), dir);
+        this.dir(Collections.<String, Object>emptyMap(), dir);
     }
 
     public void dir(Map<String, Object> options, Object dir) {
