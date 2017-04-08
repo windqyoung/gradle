@@ -21,6 +21,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.StandardSystemProperty;
 import com.google.common.collect.*;
 import org.gradle.api.*;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.GradleInternal;
 import org.gradle.api.internal.TaskInternal;
 import org.gradle.api.internal.project.ProjectInternal;
@@ -77,6 +78,8 @@ public class DefaultTaskExecutionPlan implements TaskExecutionPlan {
     private final BuildCancellationToken cancellationToken;
     private final Set<TaskInternal> runningTasks = Sets.newIdentityHashSet();
     private final Map<Task, Set<String>> canonicalizedOutputCache = Maps.newIdentityHashMap();
+    private final Map<Task, Set<String>> canonicalizedInputCache = Maps.newIdentityHashMap();
+    private final Map<Task, Set<String>> canonicalizedDestroysCache = Maps.newIdentityHashMap();
     private final ResourceLockCoordinationService coordinationService;
     private final WorkerLeaseService workerLeaseService;
     private boolean tasksCancelled;
@@ -548,19 +551,24 @@ public class DefaultTaskExecutionPlan implements TaskExecutionPlan {
         TaskInternal task = taskInfo.getTask();
 
         Pair<TaskInternal, String> overlap = firstTaskWithOverlappingOutput(task);
-        if (overlap == null) {
-            return true;
-        } else {
+        if (overlap != null) {
             LOGGER.info("Cannot execute task {} in parallel with task {} due to overlapping output: {}", task.getPath(), overlap.left.getPath(), overlap.right);
+            return false;
         }
 
-        return false;
+        overlap = firstTaskWithOverlappingInputDestroys(task);
+        if (overlap != null) {
+            LOGGER.info("Cannot execute task {} in parallel with task {} due to overlapping input/destroys: {}", task.getPath(), overlap.left.getPath(), overlap.right);
+            return false;
+        }
+
+        return true;
     }
 
-    private Set<String> canonicalizedOutputPaths(TaskInternal task) {
-        Set<String> paths = canonicalizedOutputCache.get(task);
+    private Set<String> canonicalizedPaths(Map<Task, Set<String>> cache, FileCollection files, TaskInternal task) {
+        Set<String> paths = cache.get(task);
         if (paths == null) {
-            paths = Sets.newHashSet(Iterables.transform(task.getOutputs().getFiles(), new Function<File, String>() {
+            Function<File, String> canonicalize = new Function<File, String>() {
                 @Override
                 public String apply(File file) {
                     String path;
@@ -571,8 +579,9 @@ public class DefaultTaskExecutionPlan implements TaskExecutionPlan {
                     }
                     return path;
                 }
-            }));
-            canonicalizedOutputCache.put(task, paths);
+            };
+            paths = Sets.newHashSet(Iterables.transform(files, canonicalize));
+            cache.put(task, paths);
         }
 
         return paths;
@@ -584,12 +593,50 @@ public class DefaultTaskExecutionPlan implements TaskExecutionPlan {
             return null;
         }
 
-        for (String candidateTaskOutputPath : canonicalizedOutputPaths(candidateTask)) {
-            for (TaskInternal runningTask : runningTasks) {
-                for (String runningTaskOutputPath : canonicalizedOutputPaths(runningTask)) {
-                    if (pathsOverlap(candidateTaskOutputPath, runningTaskOutputPath)) {
-                        return Pair.of(runningTask, TextUtil.shorterOf(candidateTaskOutputPath, runningTaskOutputPath));
-                    }
+        Set<String> candidateTaskOutputs = getOutputPaths(candidateTask);
+        for (TaskInternal runningTask : runningTasks) {
+            Set<String> runningTaskOutputs = getOutputPaths(runningTask);
+            String firstOverlap = findFirstOverlap(candidateTaskOutputs, runningTaskOutputs);
+            if (firstOverlap != null) {
+                return Pair.of(runningTask, firstOverlap);
+            }
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private Pair<TaskInternal, String> firstTaskWithOverlappingInputDestroys(TaskInternal candidateTask) {
+        if (runningTasks.isEmpty()) {
+            return null;
+        }
+
+        Set<String> candidateTaskInputs = getInputPaths(candidateTask);
+        Set<String> candidateTaskDestroys = getDestroyPaths(candidateTask);
+
+        for (TaskInternal runningTask : runningTasks) {
+            Set<String> runningTaskInputs = getInputPaths(runningTask);
+            Set<String> runningTaskDestroys = getDestroyPaths(runningTask);
+
+            String firstOverlap = findFirstOverlap(candidateTaskInputs, runningTaskDestroys);
+            if (firstOverlap != null) {
+                return Pair.of(runningTask, firstOverlap);
+            }
+
+            firstOverlap = findFirstOverlap(candidateTaskDestroys, runningTaskInputs);
+            if (firstOverlap != null) {
+                return Pair.of(runningTask, firstOverlap);
+            }
+        }
+
+        return null;
+    }
+
+    private String findFirstOverlap(Set<String> paths1, Set<String> paths2) {
+        for (String path1 : paths1) {
+            for (String path2 : paths2) {
+                if (pathsOverlap(path1, path2)) {
+                    return TextUtil.shorterOf(path1, path2);
                 }
             }
         }
@@ -597,6 +644,19 @@ public class DefaultTaskExecutionPlan implements TaskExecutionPlan {
         return null;
     }
 
+    private Set<String> getOutputPaths(TaskInternal task) {
+        Set<String> outputPaths = Sets.newHashSet(canonicalizedPaths(canonicalizedOutputCache, task.getOutputs().getFiles(), task));
+        outputPaths.addAll(canonicalizedPaths(canonicalizedDestroysCache, task.getDestroys().getFiles(), task));
+        return outputPaths;
+    }
+
+    private Set<String> getInputPaths(TaskInternal task) {
+        return canonicalizedPaths(canonicalizedInputCache, task.getInputs().getFiles(), task);
+    }
+
+    private Set<String> getDestroyPaths(TaskInternal task) {
+        return canonicalizedPaths(canonicalizedDestroysCache, task.getDestroys().getFiles(), task);
+    }
 
     private boolean pathsOverlap(String firstPath, String secondPath) {
         if (firstPath.equals(secondPath)) {

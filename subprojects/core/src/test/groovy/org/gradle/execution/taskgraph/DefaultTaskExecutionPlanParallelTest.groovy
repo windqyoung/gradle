@@ -21,6 +21,9 @@ import org.gradle.api.Action
 import org.gradle.api.DefaultTask
 import org.gradle.api.Task
 import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.tasks.Destroys
+import org.gradle.api.tasks.InputDirectory
+import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.initialization.BuildCancellationToken
@@ -399,6 +402,159 @@ class DefaultTaskExecutionPlanParallelTest extends ConcurrentSpec {
         operation."${b.path}".start > operation."${a.path}".end
     }
 
+    def "a task that destroys a directory that is an output of a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("a", type: AsyncWithOutputDirectory) {
+            outputDirectory = file("outputDir")
+        }
+        Task b = createChildProject(root, "b").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("outputDir")
+        }
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that writes to a directory that is being destroyed by a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("outputDir")
+        }
+        Task b = createChildProject(root, "b").task("a", type: AsyncWithOutputDirectory) {
+            outputDirectory = file("outputDir")
+        }
+
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that destroys an ancestor directory of an output of a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("a", type: AsyncWithOutputDirectory) {
+            outputDirectory = file("outputDir").file("outputSubdir").file("output")
+        }
+        Task b = createChildProject(root, "b").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("outputDir")
+        }
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that writes to an ancestor of a directory that is being destroyed by a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("outputDir").file("outputSubdir").file("output")
+        }
+        Task b = createChildProject(root, "b").task("a", type: AsyncWithOutputDirectory) {
+            outputDirectory = file("outputDir")
+        }
+
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that has an input file that is being destroyed by a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("foo")
+        }
+        Task b = createChildProject(root, "b").task("a", type: AsyncWithInputFile) {
+            inputFile = file("foo")
+        }
+
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that destroys an ancestor directory of an input of a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("a", type: AsyncWithInputDirectory) {
+            inputDirectory = file("inputDir").file("inputSubdir").file("foo")
+        }
+        Task b = createChildProject(root, "b").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("inputDir")
+        }
+        file("inputDir").file("inputSubdir").file("foo").file("bar") << "bar"
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
+    def "a task that has an input that is an ancestor of a directory that is being destroyed by a currently running task is not started"() {
+        given:
+        Task a = createChildProject(root, "a").task("b", type: AsyncWithDestroysFile) {
+            destroysFile = file("inputDir").file("inputSubdir").file("foo")
+        }
+        Task b = createChildProject(root, "b").task("a", type: AsyncWithInputDirectory) {
+            inputDirectory = file("inputDir")
+        }
+        file("inputDir").file("inputSubdir").file("foo").file("bar") << "bar"
+
+
+        when:
+        addToGraphAndPopulate(a, b)
+        async {
+            startTaskWorkers(2)
+
+            releaseTasks(a, b)
+        }
+
+        then:
+        operation."${b.path}".start > operation."${a.path}".end
+    }
+
     private void addToGraphAndPopulate(Task... tasks) {
         executionPlan.addToTaskGraph(Arrays.asList(tasks))
         executionPlan.determineExecutionPlan()
@@ -453,8 +609,23 @@ class DefaultTaskExecutionPlanParallelTest extends ConcurrentSpec {
         File outputFile
     }
 
-    static class AsyncWithOutputDirectory extends DefaultTask {
+    static class AsyncWithOutputDirectory extends Async {
         @OutputDirectory
         File outputDirectory
+    }
+
+    static class AsyncWithDestroysFile extends Async {
+        @Destroys
+        File destroysFile
+    }
+
+    static class AsyncWithInputFile extends Async {
+        @InputFile
+        File inputFile
+    }
+
+    static class AsyncWithInputDirectory extends Async {
+        @InputDirectory
+        File inputDirectory
     }
 }

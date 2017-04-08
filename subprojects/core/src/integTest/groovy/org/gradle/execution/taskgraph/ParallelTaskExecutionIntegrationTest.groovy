@@ -225,4 +225,43 @@ class ParallelTaskExecutionIntegrationTest extends AbstractIntegrationSpec {
 
         run ":a:aSerialPing", ":b:aPing", ":b:bPing"
     }
+
+    def "tasks are not run in parallel if destroy files overlap with output files"() {
+        given:
+        withParallelThreads(2)
+        buildFile << """
+            aPing.destroys.file rootProject.file("dir")
+        
+            bPing.outputs.file rootProject.file("dir")
+        """
+
+        expect:
+        blockingServer.expectConcurrentExecution(":aPing")
+        blockingServer.expectConcurrentExecution(":bPing")
+
+        run ":aPing", ":bPing"
+
+        and:
+        output.contains "Cannot execute task :bPing in parallel with task :aPing due to overlapping output: ${file("dir")}"
+    }
+
+    def "tasks are not run in parallel if destroy files overlap with input files"() {
+        given:
+        withParallelThreads(2)
+        file("foo") << "foo"
+        buildFile << """
+            aPing.destroys.file file("foo")
+        
+            bPing.inputs.file file("foo")
+        """
+
+        expect:
+        blockingServer.expectConcurrentExecution(":aPing")
+        blockingServer.expectConcurrentExecution(":bPing")
+
+        run ":aPing", ":bPing"
+
+        and:
+        output.contains "Cannot execute task :bPing in parallel with task :aPing due to overlapping input/destroys: ${file("foo")}"
+    }
 }
