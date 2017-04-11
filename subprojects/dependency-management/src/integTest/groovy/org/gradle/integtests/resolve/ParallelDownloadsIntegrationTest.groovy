@@ -72,6 +72,24 @@ class ParallelDownloadsIntegrationTest extends AbstractHttpDependencyResolutionT
     }
 
     @Unroll
+    def "downloads metadata in parallel using #repo"() {
+        enableCountOfParallelMetadataDownloads()
+
+        given:
+        multipleFilesToDownloadFrom(repo)
+
+        when:
+        run 'resolve'
+
+        then:
+        noExceptionThrown()
+        maxConcurrentRequests > 1
+
+        where:
+        repo << ['maven', 'ivy']
+    }
+
+    @Unroll
     def "downloads artifacts in parallel with project dependencies using #repo"() {
         enableCountOfParallelArtifactDownloads()
 
@@ -152,6 +170,12 @@ class ParallelDownloadsIntegrationTest extends AbstractHttpDependencyResolutionT
     private void enableCountOfParallelArtifactDownloads() {
         acceptURI = { String uri ->
             uri.endsWith('.jar')
+        }
+    }
+
+    private void enableCountOfParallelMetadataDownloads() {
+        acceptURI = { String uri ->
+            uri.endsWith('.pom') || uri.endsWith('.xml')
         }
     }
 }
