@@ -42,7 +42,6 @@ import org.gradle.api.reporting.ReportingExtension;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SourceSet;
-import org.gradle.api.tasks.Sync;
 import org.gradle.api.tasks.compile.AbstractCompile;
 import org.gradle.api.tasks.compile.JavaCompile;
 import org.gradle.api.tasks.javadoc.Javadoc;
@@ -193,14 +192,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
     private void createBinaryLifecycleTask(final SourceSet sourceSet, Project target) {
         sourceSet.compiledBy(sourceSet.getClassesTaskName());
 
-        Task classesTask = target.getTasks().create(sourceSet.getClassesTaskName(), Sync.class, new Action<Sync>() {
-            @Override
-            public void execute(Sync sync) {
-                sync.from(sourceSet.getOutput().getClassesDirs());
-                sync.into(sourceSet.getOutput().getClassesDir());
-            }
-        });
-
+        Task classesTask = target.task(sourceSet.getClassesTaskName());
         classesTask.setGroup(LifecycleBasePlugin.BUILD_GROUP);
         classesTask.setDescription("Assembles " + sourceSet.getOutput() + ".");
         classesTask.dependsOn(sourceSet.getOutput().getDirs());
