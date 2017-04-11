@@ -28,6 +28,7 @@ import org.gradle.workers.WorkerExecutor;
 import org.gradle.workers.internal.DefaultWorkResult;
 import org.gradle.workers.internal.WorkerConfigurationInternal;
 
+import javax.inject.Inject;
 import java.io.Serializable;
 
 public abstract class AbstractWorkerCompiler<T extends CompileSpec> implements Compiler<T> {
@@ -50,7 +51,7 @@ public abstract class AbstractWorkerCompiler<T extends CompileSpec> implements C
             @Override
             public void execute(WorkerConfiguration config) {
                 config.setForkMode(forkMode);
-                config.setParams((Serializable) delegate, spec);
+                config.setParams(delegate, spec);
                 applyWorkerConfiguration(spec, (WorkerConfigurationInternal) config);
             }
         });
@@ -71,6 +72,7 @@ public abstract class AbstractWorkerCompiler<T extends CompileSpec> implements C
         private final Compiler<T> compiler;
         private final T compileSpec;
 
+        @Inject
         public CompilerWorkerRunnable(Compiler<T> compiler, T compileSpec) {
             this.compiler = compiler;
             this.compileSpec = compileSpec;
