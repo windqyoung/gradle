@@ -95,7 +95,7 @@ public class DefaultTestExecuter implements TestExecuter {
         Runnable detector;
         if (testTask.isScanForTestClasses()) {
             TestFrameworkDetector testFrameworkDetector = testFramework.getDetector();
-            testFrameworkDetector.setTestClassesDirectory(testTask.getTestClassesDir());
+            testFrameworkDetector.setTestClasses(testTask.getTestClassesDirs());
             testFrameworkDetector.setTestClasspath(classpath);
             detector = new DefaultTestClassScanner(testClassFiles, testFrameworkDetector, processor);
         } else {

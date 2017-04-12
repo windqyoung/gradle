@@ -15,6 +15,7 @@
  */
 package org.gradle.api.file;
 
+import org.gradle.api.Describable;
 import org.gradle.api.Named;
 import org.gradle.api.tasks.util.PatternFilterable;
 import org.gradle.model.internal.core.UnmanagedStruct;
@@ -29,7 +30,7 @@ import java.util.Set;
  * <p>{@code SourceDirectorySet} extends {@link FileTree}. The contents of the file tree represent the source files of this set, arranged in a hierarchy. The file tree is live and reflects changes to the source directories and their contents.</p>
  */
 @UnmanagedStruct
-public interface SourceDirectorySet extends FileTree, PatternFilterable, Named {
+public interface SourceDirectorySet extends FileTree, PatternFilterable, Named, Describable {
 
     /**
      * A concise name for the source directory set (typically used to identify it in a collection).

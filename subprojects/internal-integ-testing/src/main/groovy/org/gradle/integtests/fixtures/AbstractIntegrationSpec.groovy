@@ -111,6 +111,18 @@ class AbstractIntegrationSpec extends Specification {
         getTestDirectory().file(path);
     }
 
+    TestFile javaClassFile(String fqcn) {
+        file("build/classes/java/main", fqcn)
+    }
+
+    TestFile groovyClassFile(String fqcn) {
+        file("build/classes/groovy/main", fqcn)
+    }
+
+    TestFile classFile(String language, String sourceSet, String fqcn) {
+        file("build/classes/", language, sourceSet, fqcn)
+    }
+
     protected GradleExecuter sample(Sample sample) {
         inDirectory(sample.dir)
     }

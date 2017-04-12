@@ -16,6 +16,7 @@
 
 package org.gradle.api.tasks.testing;
 
+import com.google.common.collect.Sets;
 import groovy.lang.Closure;
 import org.gradle.StartParameter;
 import org.gradle.api.Action;
@@ -97,6 +98,7 @@ import org.gradle.process.JavaForkOptions;
 import org.gradle.process.ProcessForkOptions;
 import org.gradle.process.internal.DefaultJavaForkOptions;
 import org.gradle.process.internal.worker.WorkerProcessFactory;
+import org.gradle.util.CollectionUtils;
 import org.gradle.util.ConfigureUtil;
 
 import javax.inject.Inject;
@@ -165,7 +167,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
     private final DefaultTestFilter filter;
 
     private TestExecuter testExecuter;
-    private File testClassesDir;
+    private Set<File> testClassesDirs;
     private File binResultsDir;
     private PatternFilterable patternSet;
     private boolean ignoreFailures;
@@ -191,6 +193,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
         reports = instantiator.newInstance(DefaultTestTaskReports.class, this);
         reports.getJunitXml().setEnabled(true);
         reports.getHtml().setEnabled(true);
+        testClassesDirs = Sets.newLinkedHashSet();
 
         filter = instantiator.newInstance(DefaultTestFilter.class);
     }
@@ -866,7 +869,15 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
      */
     @Internal
     public File getTestClassesDir() {
-        return testClassesDir;
+        if (testClassesDirs.isEmpty()) {
+            return null;
+        }
+        // TODO: Deprecate?
+        return getProject().file(CollectionUtils.first(testClassesDirs));
+    }
+
+    public Set<File> getTestClassesDirs() {
+        return testClassesDirs;
     }
 
     /**
@@ -875,7 +886,12 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
      * @param testClassesDir The root folder
      */
     public void setTestClassesDir(File testClassesDir) {
-        this.testClassesDir = testClassesDir;
+        testClassesDirs.clear();
+        testClassesDirs.add(testClassesDir);
+    }
+
+    public void setTestClassesDirs(File testClassesDir) {
+        testClassesDirs.add(testClassesDir);
     }
 
     /**
@@ -1159,7 +1175,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
     @PathSensitive(PathSensitivity.RELATIVE)
     @InputFiles
     public FileTree getCandidateClassFiles() {
-        return getProject().fileTree(getTestClassesDir()).matching(patternSet);
+        return getProject().files(getTestClassesDirs()).getAsFileTree().matching(patternSet);
     }
 
     /**

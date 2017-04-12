@@ -21,6 +21,7 @@ import org.gradle.api.file.SourceDirectorySet;
 
 import java.io.File;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * A collection of all output directories (compiled classes, processed resources, etc.) - notice that {@link SourceSetOutput} extends {@link FileCollection}.
@@ -101,7 +102,9 @@ public interface SourceSetOutput extends FileCollection {
 
     void addClassesDir(SourceDirectorySet sourceDirectorySet, Object classesDir);
 
-    FileCollection getClassesDirs();
+    File getClassesDirFor(SourceDirectorySet sourceDirectorySet);
+
+    Set<File> getClassesDirs();
 
     /**
      * Returns the output directory for resources

@@ -49,7 +49,7 @@ class JacocoTestRelocationIntegrationTest extends AbstractTaskRelocationIntegrat
         buildFile << """
             sourceSets.test.output.classesDir = file("build/test-classes")
         """
-        file("build/classes/test").assertIsDir().deleteDir()
+        file("build/classes/java/test").assertIsDir().deleteDir()
     }
 
     @Override
