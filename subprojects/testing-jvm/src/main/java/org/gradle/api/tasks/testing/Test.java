@@ -876,6 +876,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
         return getProject().file(CollectionUtils.first(testClassesDirs));
     }
 
+    @Internal
     public Set<File> getTestClassesDirs() {
         return testClassesDirs;
     }
