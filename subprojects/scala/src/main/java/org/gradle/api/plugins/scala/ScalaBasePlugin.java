@@ -117,10 +117,11 @@ public class ScalaBasePlugin implements Plugin<Project> {
 
         Convention scalaConvention = (Convention) InvokerHelper.getProperty(sourceSet, "convention");
         ScalaSourceSet scalaSourceSet = scalaConvention.findPlugin(ScalaSourceSet.class);
+        javaPlugin.configureForSourceSet(sourceSet, scalaSourceSet.getScala(), scalaCompile, project);
         scalaCompile.setDescription("Compiles the " + scalaSourceSet.getScala() + ".");
         scalaCompile.setSource(scalaSourceSet.getScala());
         project.getTasks().getByName(sourceSet.getClassesTaskName()).dependsOn(taskName);
-        javaPlugin.configureForSourceSet(sourceSet, scalaSourceSet.getScala(), scalaCompile, project);
+
 
         // cannot use convention mapping because the resulting object won't be serializable
         // cannot compute at task execution time because we need association with source set
