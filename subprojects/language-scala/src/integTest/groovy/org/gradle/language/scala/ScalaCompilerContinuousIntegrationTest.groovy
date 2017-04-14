@@ -27,12 +27,12 @@ class ScalaCompilerContinuousIntegrationTest extends AbstractCompilerContinuousI
 
     @Override
     String getCompileTaskName() {
-        return "compileMainJarMainScala"
+        return "compileScala"
     }
 
     @Override
     String getCompileTaskType() {
-        return "PlatformScalaCompile"
+        return "ScalaCompile"
     }
 
     @Override
@@ -54,18 +54,15 @@ class ScalaCompilerContinuousIntegrationTest extends AbstractCompilerContinuousI
     String getApplyAndConfigure() {
         return """
             plugins {
-                id 'jvm-component'
-                id 'scala-lang'
+                id 'scala'
             }
 
-            repositories{
+            repositories {
                 mavenCentral()
             }
-
-            model {
-                components {
-                    main(JvmLibrarySpec)
-                }
+            
+            dependencies {
+                compile 'org.scala-lang:scala-library:2.11.1'
             }
         """
     }

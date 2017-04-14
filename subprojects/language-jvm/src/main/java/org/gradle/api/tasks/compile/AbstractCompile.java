@@ -116,6 +116,7 @@ public abstract class AbstractCompile extends SourceTask {
      * @return
      */
     @Classpath
+    // @Internal
     public FileCollection getAdditionalClasses() {
         return additionalClasses;
     }

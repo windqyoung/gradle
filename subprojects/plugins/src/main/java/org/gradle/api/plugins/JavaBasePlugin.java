@@ -216,12 +216,6 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
     }
 
     private void definePathsForSourceSet(final SourceSet sourceSet, ConventionMapping outputConventionMapping, final Project project) {
-//        outputConventionMapping.map("classesDir", new Callable<Object>() {
-//            public Object call() throws Exception {
-//                String classesDirName = "classes/" + sourceSet.getName();
-//                return new File(project.getBuildDir(), classesDirName);
-//            }
-//        });
         outputConventionMapping.map("resourcesDir", new Callable<Object>() {
             public Object call() throws Exception {
                 String classesDirName = "resources/" + sourceSet.getName();
@@ -302,7 +296,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
         conventionMapping.map("additionalClasses", new Callable<FileCollection>() {
             @Override
             public FileCollection call() throws Exception {
-                return target.files(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava()));
+                return target.files(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava())).getAsFileTree();
             }
         });
         sourceSet.getOutput().addClassesDir(sourceDirectorySet, new Callable<Object>() {
