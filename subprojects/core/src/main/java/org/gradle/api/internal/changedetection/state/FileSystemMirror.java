@@ -30,7 +30,7 @@ public interface FileSystemMirror {
     void putFile(FileSnapshot file);
 
     @Nullable
-    DirectoryTreeDetails getDirectoryTree(String path);
+    FileTreeSnapshot getDirectoryTree(String path);
 
-    void putDirectory(DirectoryTreeDetails directory);
+    void putDirectory(FileTreeSnapshot directory);
 }
