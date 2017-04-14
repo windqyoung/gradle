@@ -164,6 +164,8 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
         JavaCompile compileTask = target.getTasks().create(sourceSet.getCompileJavaTaskName(), JavaCompile.class);
         compileTask.setDescription("Compiles " + javaSourceSet + ".");
         compileTask.setSource(javaSourceSet);
+        // Doesn't depend on anything by default.
+        compileTask.setAdditionalClasses(target.files());
         ConventionMapping conventionMapping = compileTask.getConventionMapping();
         conventionMapping.map("classpath", new Callable<Object>() {
             public Object call() throws Exception {
