@@ -159,7 +159,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
         return new BridgedBinaries(binaries);
     }
 
-    private void createCompileJavaTaskForBinary(final SourceSet sourceSet, final SourceDirectorySet javaSourceSet, Project target) {
+    private void createCompileJavaTaskForBinary(final SourceSet sourceSet, final SourceDirectorySet javaSourceSet, final Project target) {
         JavaCompile compileTask = target.getTasks().create(sourceSet.getCompileJavaTaskName(), JavaCompile.class);
         compileTask.setDescription("Compiles " + javaSourceSet + ".");
         compileTask.setSource(javaSourceSet);
@@ -169,8 +169,12 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
                 return sourceSet.getCompileClasspath();
             }
         });
-        final File classesDir = new File(target.getBuildDir(), "classes/" + javaSourceSet.getName() + "/" + sourceSet.getName());
-        sourceSet.getOutput().addClassesDir(javaSourceSet, classesDir);
+        sourceSet.getOutput().addClassesDir(javaSourceSet, new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                return new File(target.getBuildDir(), "classes/" + javaSourceSet.getName() + "/" + sourceSet.getName());
+            }
+        });
         conventionMapping.map("destinationDir", new Callable<Object>() {
             public Object call() throws Exception {
                 return sourceSet.getOutput().getClassesDirFor(javaSourceSet);
@@ -284,7 +288,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
 
     }
 
-    public void configureForSourceSet(final SourceSet sourceSet, final SourceDirectorySet sourceDirectorySet, AbstractCompile compile, Project target) {
+    public void configureForSourceSet(final SourceSet sourceSet, final SourceDirectorySet sourceDirectorySet, AbstractCompile compile, final Project target) {
         ConventionMapping conventionMapping;
         compile.setDescription("Compiles the " + sourceDirectorySet.getDisplayName() + ".");
         conventionMapping = compile.getConventionMapping();
@@ -294,8 +298,12 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
                 return sourceSet.getCompileClasspath();
             }
         });
-        final File classesDir = new File(target.getBuildDir(), "classes/" + sourceDirectorySet.getName() + "/" + sourceSet.getName());
-        sourceSet.getOutput().addClassesDir(sourceDirectorySet, classesDir);
+        sourceSet.getOutput().addClassesDir(sourceDirectorySet, new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                return new File(target.getBuildDir(), "classes/" + sourceDirectorySet.getName() + "/" + sourceSet.getName());
+            }
+        });
         conventionMapping.map("destinationDir", new Callable<Object>() {
             public Object call() throws Exception {
                 return sourceSet.getOutput().getClassesDirFor(sourceDirectorySet);

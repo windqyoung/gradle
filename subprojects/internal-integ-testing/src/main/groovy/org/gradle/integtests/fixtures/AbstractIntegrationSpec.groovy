@@ -119,6 +119,10 @@ class AbstractIntegrationSpec extends Specification {
         file("build/classes/groovy/main", fqcn)
     }
 
+    TestFile scalaClassFile(String fqcn) {
+        file("build/classes/scala/main", fqcn)
+    }
+
     TestFile classFile(String language, String sourceSet, String fqcn) {
         file("build/classes/", language, sourceSet, fqcn)
     }
