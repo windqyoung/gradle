@@ -31,7 +31,7 @@ public abstract class AbstractCompile extends SourceTask {
     private String sourceCompatibility;
     private String targetCompatibility;
     private FileCollection classpath;
-    private FileCollection additionalClasses;
+    private FileCollection additionalClasses = getProject().files();
 
     protected abstract void compile();
 
