@@ -295,7 +295,7 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
         compile.setSource(sourceSet.getJava());
         conventionMapping.map("classpath", new Callable<Object>() {
             public Object call() throws Exception {
-                return sourceSet.getCompileClasspath();
+                return target.files(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava()), sourceSet.getCompileClasspath());
             }
         });
         sourceSet.getOutput().addClassesDir(sourceDirectorySet, new Callable<Object>() {
