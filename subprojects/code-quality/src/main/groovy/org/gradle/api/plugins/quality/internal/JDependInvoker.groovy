@@ -25,7 +25,7 @@ abstract class JDependInvoker {
         def antBuilder = jdependTask.antBuilder
         def path = jdependTask.path
         def jdependClasspath = jdependTask.jdependClasspath
-        def classesDir = jdependTask.classesDir
+        Set<File> classesDirs = jdependTask.classesDirs
 
         Map<String, Object> reportArguments = [:]
         if (reports.enabled.empty) {
@@ -41,7 +41,9 @@ abstract class JDependInvoker {
             ant.taskdef(name: 'jdependreport', classname: 'org.apache.tools.ant.taskdefs.optional.jdepend.JDependTask')
             ant.jdependreport(*:reportArguments, haltonerror: true) {
                 classespath {
-                    pathElement(location: classesDir)
+                    classesDirs.findAll({ it.exists() }).each { classesDir ->
+                        pathElement(location: classesDir)
+                    }
                 }
             }
         }

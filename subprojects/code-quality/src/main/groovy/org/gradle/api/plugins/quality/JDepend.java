@@ -15,6 +15,7 @@
  */
 package org.gradle.api.plugins.quality;
 
+import com.google.common.collect.ImmutableSet;
 import groovy.lang.Closure;
 import org.gradle.api.Action;
 import org.gradle.api.DefaultTask;
@@ -26,16 +27,19 @@ import org.gradle.api.plugins.quality.internal.JDependReportsImpl;
 import org.gradle.api.reporting.Reporting;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.Nested;
 import org.gradle.api.tasks.PathSensitive;
 import org.gradle.api.tasks.PathSensitivity;
 import org.gradle.api.tasks.SkipWhenEmpty;
 import org.gradle.api.tasks.TaskAction;
 import org.gradle.internal.reflect.Instantiator;
+import org.gradle.util.CollectionUtils;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.Set;
 
 /**
  * Analyzes code with <a href="http://clarkware.com/software/JDepend.html">JDepend</a>.
@@ -45,7 +49,7 @@ public class JDepend extends DefaultTask implements Reporting<JDependReports> {
 
     private FileCollection jdependClasspath;
 
-    private File classesDir;
+    private Set<File> classesDirs;
 
     private final JDependReports reports;
 
@@ -53,10 +57,10 @@ public class JDepend extends DefaultTask implements Reporting<JDependReports> {
      * The directory containing the classes to be analyzed.
      */
     @PathSensitive(PathSensitivity.RELATIVE)
-    @InputDirectory
+    @InputFiles
     @SkipWhenEmpty
-    public File getClassesDir() {
-        return classesDir;
+    public Set<File> getClassesDirs() {
+        return classesDirs;
     }
 
     public JDepend() {
@@ -136,8 +140,8 @@ public class JDepend extends DefaultTask implements Reporting<JDependReports> {
         this.jdependClasspath = jdependClasspath;
     }
 
-    public void setClassesDir(File classesDir) {
-        this.classesDir = classesDir;
+    public void setClassesDirs(Set<File> classesDirs) {
+        this.classesDirs = classesDirs;
     }
 
     /**
@@ -148,5 +152,20 @@ public class JDepend extends DefaultTask implements Reporting<JDependReports> {
         return reports;
     }
 
+    /**
+     * TODO: add doc
+     * @return the classes directory
+     */
+    @Internal
+    public File getClassesDir() {
+        return CollectionUtils.single(getClassesDirs());
+    }
 
+    /**
+     * TODO: Sets
+     * @param classesDir the classes directory
+     */
+    public void setClassesDir(File classesDir) {
+        setClassesDirs(ImmutableSet.of(classesDir));
+    }
 }

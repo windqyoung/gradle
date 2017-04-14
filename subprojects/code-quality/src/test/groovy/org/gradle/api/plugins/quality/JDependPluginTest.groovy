@@ -72,7 +72,7 @@ class JDependPluginTest extends AbstractProjectBuilderSpec {
         task.with {
             assert description == "Run JDepend analysis for ${sourceSet.name} classes"
             assert jdependClasspath == project.configurations.jdepend
-            assert classesDir == sourceSet.output.classesDir
+            assert classesDirs == sourceSet.output.classesDirs
             assert reports.xml.destination == project.file("build/reports/jdepend/${sourceSet.name}.xml")
         }
     }
@@ -159,7 +159,7 @@ class JDependPluginTest extends AbstractProjectBuilderSpec {
         task.with {
             assert description == "Run JDepend analysis for ${sourceSet.name} classes"
             assert jdependClasspath == project.configurations.jdepend
-            assert classesDir == sourceSet.output.classesDir
+            assert classesDirs == sourceSet.output.classesDirs
             assert reports.xml.destination == project.file("jdepend-reports/${sourceSet.name}.xml")
         }
     }
