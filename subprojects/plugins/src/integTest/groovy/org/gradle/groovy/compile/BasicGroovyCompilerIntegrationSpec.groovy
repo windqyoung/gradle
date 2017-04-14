@@ -97,7 +97,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
         checkCompileOutput('unable to resolve class')
         failure.assertHasCause(compilationFailureMessage)
 
-        groovyClassFile('Groovy.java').exists()
+        file('build/classes/stub/Groovy.java').exists()
         groovyClassFile('Groovy.class').exists()
         groovyClassFile('Groovy$$Generated.java').exists()
         groovyClassFile('Groovy$$Generated.class').exists()
@@ -118,7 +118,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
 
         // No Groovy stubs will be created if there are no java files
         // and an annotation processor is not on the classpath
-        !groovyClassFile('Groovy.java').exists()
+        !file('build/classes/stub/Groovy.java').exists()
         !groovyClassFile('Groovy$$Generated.java').exists()
         !groovyClassFile('Groovy.class').exists()
         !groovyClassFile('Groovy$$Generated.class').exists()
@@ -145,7 +145,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
 
         // Because annotation processing is disabled
         // No Groovy stubs will be created
-        !groovyClassFile('Groovy.java').exists()
+        !file('build/classes/stub/Groovy.java').exists()
         !groovyClassFile('Groovy$$Generated.java').exists()
         !groovyClassFile('Groovy.class').exists()
         !groovyClassFile('Groovy$$Generated.class').exists()
@@ -167,7 +167,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
         // If there is no annotation processor on the classpath,
         // the Groovy stub class won't be compiled, because it is not
         // referenced by any java code in the joint compile
-        groovyClassFile('Groovy.java').exists()
+        file('build/classes/stub/Groovy.java').exists()
         !groovyClassFile('Groovy.class').exists()
         groovyClassFile('Java.class').exists()
     }
@@ -237,7 +237,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
         // the Java stub of Groovy.groovy will be compiled even if
         // it's not referenced by any other java code, even if the
         // Groovy compiler fails to compile the same class.
-        groovyClassFile('Groovy.java').exists()
+        file('build/classes/stub/Groovy.java').exists()
         groovyClassFile('Groovy.class').exists()
         groovyClassFile('Java.class').exists()
         groovyClassFile('Groovy$$Generated.java').exists()
@@ -295,7 +295,7 @@ abstract class BasicGroovyCompilerIntegrationSpec extends MultiVersionIntegratio
         // Because annotation processing is disabled
         // the Groovy class won't be compiled, because it is not
         // referenced by any java code in the joint compile
-        groovyClassFile('Groovy.java').exists()
+        file('build/classes/stub/Groovy.java').exists()
         !groovyClassFile('Groovy.class').exists()
         groovyClassFile('Java.class').exists()
         !groovyClassFile('Groovy$$Generated.java').exists()
