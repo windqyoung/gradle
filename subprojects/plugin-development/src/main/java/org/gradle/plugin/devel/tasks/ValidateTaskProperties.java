@@ -24,7 +24,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
-import org.gradle.api.DefaultTask;
 import org.gradle.api.GradleException;
 import org.gradle.api.Incubating;
 import org.gradle.api.InvalidUserDataException;
@@ -34,6 +33,7 @@ import org.gradle.api.file.EmptyFileVisitor;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileVisitDetails;
+import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.internal.DocumentationRegistry;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
@@ -109,7 +109,7 @@ import java.util.Set;
 @Incubating
 @CacheableTask
 @SuppressWarnings("WeakerAccess")
-public class ValidateTaskProperties extends DefaultTask implements VerificationTask {
+public class ValidateTaskProperties extends ConventionTask implements VerificationTask {
     private Set<File> classesDirs;
     private FileCollection classpath;
     private Object outputFile;

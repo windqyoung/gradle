@@ -217,9 +217,15 @@ public class JavaGradlePluginPlugin implements Plugin<Project> {
         File validatorReportsDir = new File(reportsDir, "task-properties");
         validator.setOutputFile(new File(validatorReportsDir, "report.txt"));
 
-        SourceSet mainSourceSet = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+        final SourceSet mainSourceSet = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
+        validator.getConventionMapping().map("classesDirs", new Callable<Object>() {
+            @Override
+            public Object call() throws Exception {
+                return mainSourceSet.getOutput().getClassesDirs();
+            }
+        });
+
         validator.setClasspath(mainSourceSet.getCompileClasspath());
-        validator.setClassesDirs(mainSourceSet.getOutput().getClassesDirs());
         validator.dependsOn(mainSourceSet.getOutput());
 
         project.getTasks().getByName(JavaBasePlugin.CHECK_TASK_NAME).dependsOn(validator);

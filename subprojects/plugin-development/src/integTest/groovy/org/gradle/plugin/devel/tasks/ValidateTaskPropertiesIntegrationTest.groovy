@@ -31,11 +31,13 @@ class ValidateTaskPropertiesIntegrationTest extends AbstractIntegrationSpec {
             tasks.create("validateTaskProperties", org.gradle.plugin.devel.tasks.ValidateTaskProperties) { validator ->
                 def sourceSet = sourceSets.main
                 validator.dependsOn sourceSet.output
-                validator.classesDirs = sourceSet.output.classesDirs
                 validator.classpath = sourceSet.runtimeClasspath
                 validator.failOnWarning = true
             }
             tasks.check.dependsOn validateTaskProperties
+            afterEvaluate {
+                validateTaskProperties.classesDirs = sourceSets.main.output.classesDirs
+            }
         """
     }
 

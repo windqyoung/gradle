@@ -18,11 +18,17 @@ package org.gradle.api.plugins.osgi;
 import org.gradle.api.Action;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.Task;
+import org.gradle.api.file.CopySpec;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
 import org.gradle.api.plugins.JavaPluginConvention;
 import org.gradle.api.tasks.bundling.Jar;
+import org.gradle.util.CollectionUtils;
+
+import java.io.File;
+import java.util.Set;
 
 /**
  * A {@link Plugin} which extends the {@link JavaPlugin} to add OSGi meta-information to the project Jars.
@@ -37,10 +43,32 @@ public class OsgiPlugin implements Plugin<Project> {
         project.getPlugins().withType(JavaPlugin.class, new Action<JavaPlugin>() {
             @Override
             public void execute(JavaPlugin javaPlugin) {
-                OsgiManifest osgiManifest = osgiConvention.osgiManifest();
-                osgiManifest.setClassesDir(project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main").getOutput().getClassesDir());
-                osgiManifest.setClasspath(project.getConfigurations().getByName("runtime"));
                 Jar jarTask = (Jar) project.getTasks().getByName("jar");
+                OsgiManifest osgiManifest = osgiConvention.osgiManifest();
+
+                final Set<File> classes = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main").getOutput().getClassesDirs();
+                // When creating the OSGi manifest, we must have a single view of all of the classes included in the jar.
+                final File singleClassesDirectory;
+                if (classes.size() > 1) {
+                    singleClassesDirectory = new File(jarTask.getTemporaryDir(), "osgi-classes");
+                    jarTask.doFirst(new Action<Task>() {
+                        @Override
+                        public void execute(Task task) {
+                            project.sync(new Action<CopySpec>() {
+                                @Override
+                                public void execute(CopySpec copySpec) {
+                                    copySpec.from(classes);
+                                    copySpec.into(singleClassesDirectory);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    singleClassesDirectory = CollectionUtils.single(classes);
+                }
+                osgiManifest.setClassesDir(singleClassesDirectory);
+                osgiManifest.setClasspath(project.getConfigurations().getByName("runtime"));
+
                 jarTask.setManifest(osgiManifest);
             }
         });

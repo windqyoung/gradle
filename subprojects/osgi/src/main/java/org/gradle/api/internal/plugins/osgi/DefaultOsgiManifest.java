@@ -122,6 +122,8 @@ public class DefaultOsgiManifest extends DefaultManifest implements OsgiManifest
             }
         }
 
+        // bnd analyzer requires that this path exists
+        getClassesDir().mkdirs();
         analyzer.setJar(getClassesDir());
 
         analyzer.setClasspath(getClasspath().getFiles().toArray(new File[0]));
