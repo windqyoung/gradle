@@ -31,6 +31,7 @@ public abstract class AbstractCompile extends SourceTask {
     private String sourceCompatibility;
     private String targetCompatibility;
     private FileCollection classpath;
+    private FileCollection additionalClasses;
 
     protected abstract void compile();
 
@@ -108,5 +109,22 @@ public abstract class AbstractCompile extends SourceTask {
      */
     public void setTargetCompatibility(String targetCompatibility) {
         this.targetCompatibility = targetCompatibility;
+    }
+
+    /**
+     * TODO:
+     * @return
+     */
+    @Classpath
+    public FileCollection getAdditionalClasses() {
+        return additionalClasses;
+    }
+
+    /**
+     * TODO:
+     * @return
+     */
+    public void setAdditionalClasses(FileCollection additionalClasses) {
+        this.additionalClasses = additionalClasses;
     }
 }
