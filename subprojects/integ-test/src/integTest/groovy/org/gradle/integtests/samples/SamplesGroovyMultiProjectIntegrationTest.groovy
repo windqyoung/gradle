@@ -37,8 +37,8 @@ class SamplesGroovyMultiProjectIntegrationTest extends AbstractIntegrationTest {
     @Test
     @LeaksFileHandles
     public void groovyProjectSamples() {
-        String packagePrefix = 'build/classes/main/org/gradle'
-        String testPackagePrefix = 'build/classes/test/org/gradle'
+        String packagePrefix = 'build/classes/groovy/main/org/gradle'
+        String testPackagePrefix = 'build/classes/groovy/test/org/gradle'
 
 
         TestFile groovyProjectDir = sample.dir

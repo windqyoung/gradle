@@ -219,7 +219,7 @@ public class JavaGradlePluginPlugin implements Plugin<Project> {
 
         SourceSet mainSourceSet = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
         validator.setClasspath(mainSourceSet.getCompileClasspath());
-        validator.setClassesDir(mainSourceSet.getOutput().getClassesDir());
+        validator.setClassesDirs(mainSourceSet.getOutput().getClassesDirs());
         validator.dependsOn(mainSourceSet.getOutput());
 
         project.getTasks().getByName(JavaBasePlugin.CHECK_TASK_NAME).dependsOn(validator);

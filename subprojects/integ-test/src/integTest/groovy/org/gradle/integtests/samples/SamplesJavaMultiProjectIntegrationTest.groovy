@@ -66,8 +66,8 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void assertEverythingBuilt() {
-        String packagePrefix = 'build/classes/main/org/gradle'
-        String testPackagePrefix = 'build/classes/test/org/gradle'
+        String packagePrefix = 'build/classes/java/main/org/gradle'
+        String testPackagePrefix = 'build/classes/java/test/org/gradle'
         String resPackagePrefix = 'build/resources/main/org/gradle'
         String testResPackagePrefix = 'build/resources/test/org/gradle'
 
@@ -201,7 +201,7 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
         TestFile apiDir = javaprojectDir.file(API_NAME)
         executer.inDirectory(apiDir).withTasks('checkProjectDependency').run()
     }
-           
+
     private static def checkPartialWebAppBuild(String packagePrefix, TestFile javaprojectDir, String testPackagePrefix) {
         assertExists(javaprojectDir, SHARED_NAME, packagePrefix, SHARED_NAME, 'Person.class')
         assertExists(javaprojectDir, SHARED_NAME, testPackagePrefix, SHARED_NAME, 'PersonTest.class')

@@ -30,15 +30,15 @@ import org.gradle.api.Incubating;
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.Task;
 import org.gradle.api.UncheckedIOException;
+import org.gradle.api.file.EmptyFileVisitor;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileVisitDetails;
-import org.gradle.api.file.FileVisitor;
 import org.gradle.api.internal.DocumentationRegistry;
-import org.gradle.api.internal.file.collections.DirectoryFileTreeFactory;
 import org.gradle.api.tasks.CacheableTask;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.InputDirectory;
+import org.gradle.api.tasks.InputFiles;
 import org.gradle.api.tasks.Optional;
 import org.gradle.api.tasks.OutputFile;
 import org.gradle.api.tasks.PathSensitive;
@@ -64,9 +64,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Validates task property annotations.
@@ -110,7 +110,7 @@ import java.util.Map;
 @CacheableTask
 @SuppressWarnings("WeakerAccess")
 public class ValidateTaskProperties extends DefaultTask implements VerificationTask {
-    private File classesDir;
+    private Set<File> classesDirs;
     private FileCollection classpath;
     private Object outputFile;
     private boolean ignoreFailures;
@@ -119,7 +119,7 @@ public class ValidateTaskProperties extends DefaultTask implements VerificationT
     @TaskAction
     public void validateTaskClasses() throws IOException {
         ClassLoader previousContextClassLoader = Thread.currentThread().getContextClassLoader();
-        ClassPath classPath = new DefaultClassPath(Iterables.concat(Collections.singleton(getClassesDir()), getClasspath()));
+        ClassPath classPath = new DefaultClassPath(Iterables.concat(classesDirs, getClasspath()));
         ClassLoader classLoader = getClassLoaderFactory().createIsolatedClassLoader(classPath);
         Thread.currentThread().setContextClassLoader(classLoader);
         try {
@@ -144,11 +144,7 @@ public class ValidateTaskProperties extends DefaultTask implements VerificationT
             throw new RuntimeException(e);
         }
 
-        getServices().get(DirectoryFileTreeFactory.class).create(getClassesDir()).visit(new FileVisitor() {
-            @Override
-            public void visitDir(FileVisitDetails dirDetails) {
-            }
-
+        getClassesDirs().visit(new EmptyFileVisitor() {
             @Override
             public void visitFile(FileVisitDetails fileDetails) {
                 if (!fileDetails.getPath().endsWith(".class")) {
@@ -273,17 +269,17 @@ public class ValidateTaskProperties extends DefaultTask implements VerificationT
      * The directory containing the classes to validate.
      */
     @PathSensitive(PathSensitivity.RELATIVE)
-    @InputDirectory
+    @InputFiles
     @SkipWhenEmpty
-    public File getClassesDir() {
-        return classesDir;
+    public FileTree getClassesDirs() {
+        return getProject().files(classesDirs).getAsFileTree();
     }
 
     /**
      * Sets the directory containing the classes to validate.
      */
-    public void setClassesDir(File classesDir) {
-        this.classesDir = classesDir;
+    public void setClassesDirs(Set<File> classesDirs) {
+        this.classesDirs = classesDirs;
     }
 
     /**

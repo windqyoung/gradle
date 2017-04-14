@@ -876,11 +876,6 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
         return getProject().file(CollectionUtils.first(testClassesDirs));
     }
 
-    @Internal
-    public Set<File> getTestClassesDirs() {
-        return testClassesDirs;
-    }
-
     /**
      * Sets the root folder for the compiled test sources.
      *
@@ -891,8 +886,14 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
         testClassesDirs.add(testClassesDir);
     }
 
-    public void setTestClassesDirs(File testClassesDir) {
-        testClassesDirs.add(testClassesDir);
+    @Internal
+    public Set<File> getTestClassesDirs() {
+        return testClassesDirs;
+    }
+
+    public void setTestClassesDirs(Set<File> testClassesDirs) {
+        this.testClassesDirs.clear();
+        this.testClassesDirs.addAll(testClassesDirs);
     }
 
     /**
