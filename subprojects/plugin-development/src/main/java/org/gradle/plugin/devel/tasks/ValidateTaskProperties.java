@@ -31,7 +31,6 @@ import org.gradle.api.Task;
 import org.gradle.api.UncheckedIOException;
 import org.gradle.api.file.EmptyFileVisitor;
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.file.FileTree;
 import org.gradle.api.file.FileVisitDetails;
 import org.gradle.api.internal.ConventionTask;
 import org.gradle.api.internal.DocumentationRegistry;
@@ -119,7 +118,7 @@ public class ValidateTaskProperties extends ConventionTask implements Verificati
     @TaskAction
     public void validateTaskClasses() throws IOException {
         ClassLoader previousContextClassLoader = Thread.currentThread().getContextClassLoader();
-        ClassPath classPath = new DefaultClassPath(Iterables.concat(classesDirs, getClasspath()));
+        ClassPath classPath = new DefaultClassPath(Iterables.concat(getClassesDirs(), getClasspath()));
         ClassLoader classLoader = getClassLoaderFactory().createIsolatedClassLoader(classPath);
         Thread.currentThread().setContextClassLoader(classLoader);
         try {
@@ -144,7 +143,7 @@ public class ValidateTaskProperties extends ConventionTask implements Verificati
             throw new RuntimeException(e);
         }
 
-        getClassesDirs().visit(new EmptyFileVisitor() {
+        getProject().files(getClassesDirs()).getAsFileTree().visit(new EmptyFileVisitor() {
             @Override
             public void visitFile(FileVisitDetails fileDetails) {
                 if (!fileDetails.getPath().endsWith(".class")) {
@@ -271,8 +270,8 @@ public class ValidateTaskProperties extends ConventionTask implements Verificati
     @PathSensitive(PathSensitivity.RELATIVE)
     @InputFiles
     @SkipWhenEmpty
-    public FileTree getClassesDirs() {
-        return getProject().files(classesDirs).getAsFileTree();
+    public Set<File> getClassesDirs() {
+        return classesDirs;
     }
 
     /**
