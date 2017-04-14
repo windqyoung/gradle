@@ -73,13 +73,11 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
         if (classesDir!=null) {
             return fileResolver.resolve(classesDir);
         }
-        for (Map.Entry<SourceDirectorySet, Object> e : classesDirs.entrySet()) {
-            File resolvedClassesDir = fileResolver.resolve(e.getValue());
-            if (resolvedClassesDir.exists()) {
-                return resolvedClassesDir;
-            }
+        if (classesDirs.isEmpty()) {
+            return null;
         }
-        return null;
+        // TODO: log deprecation?
+        return fileResolver.resolve(CollectionUtils.first(classesDirs.entrySet()).getValue());
     }
 
     public void setClassesDir(Object classesDir) {
