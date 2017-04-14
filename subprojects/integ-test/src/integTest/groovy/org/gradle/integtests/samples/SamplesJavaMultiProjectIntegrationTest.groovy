@@ -49,7 +49,7 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void multiProjectJavaProjectSample() {
+    void multiProjectJavaProjectSample() {
         // Build and test projects
         executer.inDirectory(javaprojectDir).withTasks('build').run()
 
@@ -141,7 +141,7 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void multiProjectJavaDoc() {
+    void multiProjectJavaDoc() {
         executer.inDirectory(javaprojectDir).withTasks('clean', 'javadoc').run()
         javaprojectDir.file(SHARED_NAME, 'build/docs/javadoc/index.html').assertIsFile()
         javaprojectDir.file(SHARED_NAME, 'build/docs/javadoc/index.html').assertContents(containsString("shared 1.0 API"))
@@ -154,9 +154,9 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void multiProjectPartialBuild() {
-        String packagePrefix = 'build/classes/main/org/gradle'
-        String testPackagePrefix = 'build/classes/test/org/gradle'
+    void multiProjectPartialBuild() {
+        String packagePrefix = 'build/classes/java/main/org/gradle'
+        String testPackagePrefix = 'build/classes/java/test/org/gradle'
 
         // Partial build using current directory
         executer.inDirectory(javaprojectDir.file("$SERVICES_NAME/$WEBAPP_NAME")).withTasks('buildNeeded').run()
@@ -174,20 +174,20 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
 
 
     @Test
-    public void buildDependents() {
+    void buildDependents() {
         executer.inDirectory(javaprojectDir).withTasks('clean', "$SHARED_NAME:buildDependents".toString()).run()
         assertEverythingBuilt()
     }
 
     @Test
-    public void clean() {
+    void clean() {
         executer.inDirectory(javaprojectDir).withTasks('classes').run()
         executer.inDirectory(javaprojectDir).withTasks('clean').run()
         projects.each { javaprojectDir.file("$it/build").assertDoesNotExist() }
     }
 
     @Test
-    public void noRebuildOfProjectDependencies() {
+    void noRebuildOfProjectDependencies() {
         TestFile apiDir = javaprojectDir.file(API_NAME)
         executer.inDirectory(apiDir).withTasks('classes').run()
         TestFile sharedJar = javaprojectDir.file("shared/build/libs/shared-1.0.jar")
@@ -197,7 +197,7 @@ class SamplesJavaMultiProjectIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    public void shouldNotUseCacheForProjectDependencies() {
+    void shouldNotUseCacheForProjectDependencies() {
         TestFile apiDir = javaprojectDir.file(API_NAME)
         executer.inDirectory(apiDir).withTasks('checkProjectDependency').run()
     }
