@@ -25,7 +25,7 @@ abstract class JDependInvoker {
         def antBuilder = jdependTask.antBuilder
         def path = jdependTask.path
         def jdependClasspath = jdependTask.jdependClasspath
-        Set<File> classesDirs = jdependTask.classesDirs
+        def classesDirs = jdependTask.classesDirs
 
         Map<String, Object> reportArguments = [:]
         if (reports.enabled.empty) {
@@ -41,6 +41,8 @@ abstract class JDependInvoker {
             ant.taskdef(name: 'jdependreport', classname: 'org.apache.tools.ant.taskdefs.optional.jdepend.JDependTask')
             ant.jdependreport(*:reportArguments, haltonerror: true) {
                 classespath {
+                    // JDepend will fail if the classesDir does not exist
+                    // The directory should have been created by this point
                     classesDirs.findAll({ it.exists() }).each { classesDir ->
                         pathElement(location: classesDir)
                     }

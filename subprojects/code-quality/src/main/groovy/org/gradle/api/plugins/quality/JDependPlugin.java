@@ -19,13 +19,13 @@ import com.google.common.util.concurrent.Callables;
 import org.gradle.api.Action;
 import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.DependencySet;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.ConventionMapping;
 import org.gradle.api.plugins.quality.internal.AbstractCodeQualityPlugin;
 import org.gradle.api.reporting.SingleFileReport;
 import org.gradle.api.tasks.SourceSet;
 
 import java.io.File;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -108,10 +108,10 @@ public class JDependPlugin extends AbstractCodeQualityPlugin<JDepend> {
     protected void configureForSourceSet(final SourceSet sourceSet, JDepend task) {
         task.dependsOn(sourceSet.getOutput());
         task.setDescription("Run JDepend analysis for " + sourceSet.getName() + " classes");
-        conventionMappingOf(task).map("classesDirs", new Callable<Set<File>>() {
+        conventionMappingOf(task).map("classesDirs", new Callable<FileCollection>() {
             @Override
-            public Set<File> call() throws Exception {
-                return sourceSet.getOutput().getClassesDirs();
+            public FileCollection call() throws Exception {
+                return project.files(sourceSet.getOutput().getClassesDirs());
             }
         });
     }
