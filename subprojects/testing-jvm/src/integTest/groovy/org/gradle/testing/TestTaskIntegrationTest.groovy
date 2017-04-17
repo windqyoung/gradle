@@ -17,6 +17,7 @@
 package org.gradle.testing
 
 import org.gradle.integtests.fixtures.AbstractIntegrationSpec
+import org.gradle.test.fixtures.file.TestFile
 import org.gradle.util.Requires
 import org.gradle.util.TestPrecondition
 import spock.lang.Issue
@@ -64,7 +65,7 @@ class TestTaskIntegrationTest extends AbstractIntegrationSpec {
         noExceptionThrown()
 
         and:
-        classFormat('build/classes/test/MyTest.class') == 53
+        classFormat(classFile('java', 'test', 'MyTest.class')) == 53
 
     }
 
@@ -88,9 +89,8 @@ class TestTaskIntegrationTest extends AbstractIntegrationSpec {
         noExceptionThrown()
 
         and:
-        classFormat('build/classes/main/module-info.class') == 53
-        classFormat('build/classes/test/MyTest.class') == 53
-
+        classFormat(javaClassFile('module-info.class')) == 53
+        classFormat(classFile('java', 'test', 'MyTest.class')) == 53
     }
 
     @Unroll
@@ -203,7 +203,7 @@ class TestTaskIntegrationTest extends AbstractIntegrationSpec {
         '''
     }
 
-    private int classFormat(String path) {
-        file(path).bytes[7] & 0xFF
+    private int classFormat(TestFile path) {
+        path.bytes[7] & 0xFF
     }
 }
