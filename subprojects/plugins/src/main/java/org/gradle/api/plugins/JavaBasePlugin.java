@@ -284,6 +284,30 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
 
     }
 
+    public void configureForSourceSet(final SourceSet sourceSet, AbstractCompile compile) {
+        ConventionMapping conventionMapping;
+        compile.setDescription("Compiles the " + sourceSet.getJava() + ".");
+        conventionMapping = compile.getConventionMapping();
+        compile.setSource(sourceSet.getJava());
+        conventionMapping.map("classpath", new Callable<Object>() {
+            public Object call() throws Exception {
+                return sourceSet.getCompileClasspath();
+            }
+        });
+        conventionMapping.map("additionalClasses", new Callable<Set<File>>() {
+            @Override
+            public Set<File> call() throws Exception {
+                return Collections.singleton(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava()));
+            }
+        });
+        // TODO: This doesn't work any more, but configureForSourceSet is a public API.
+        conventionMapping.map("destinationDir", new Callable<Object>() {
+            public Object call() throws Exception {
+                return sourceSet.getOutput().getClassesDir();
+            }
+        });
+    }
+
     public void configureForSourceSet(final SourceSet sourceSet, final SourceDirectorySet sourceDirectorySet, AbstractCompile compile, final Project target) {
         ConventionMapping conventionMapping;
         compile.setDescription("Compiles the " + sourceDirectorySet.getDisplayName() + ".");
