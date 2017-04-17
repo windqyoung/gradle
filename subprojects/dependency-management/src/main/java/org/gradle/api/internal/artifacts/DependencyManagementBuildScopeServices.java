@@ -117,8 +117,8 @@ class DependencyManagementBuildScopeServices {
 
     BuildIdentity createBuildIdentity(ProjectRegistry<ProjectInternal> projectRegistry) {
         ProjectInternal rootProject = projectRegistry.getProject(":");
-        if (rootProject == null || rootProject.getGradle().getParent() == null) {
-            // BuildIdentity for a top-level build
+        if (rootProject == null) {
+            // BuildIdentity for dependency resolution within init scripts
             return new DefaultBuildIdentity(new DefaultBuildIdentifier(":", true));
         }
         // BuildIdentity for an included build

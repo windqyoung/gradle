@@ -16,7 +16,6 @@
 
 package org.gradle.plugins.ide.internal.resolver.model;
 
-import org.gradle.api.artifacts.component.BuildIdentifier;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
 
 public class IdeProjectDependency extends IdeDependency {
@@ -40,12 +39,7 @@ public class IdeProjectDependency extends IdeDependency {
     private static String determineProjectName(ProjectComponentIdentifier projectId) {
         String projectPath = projectId.getProjectPath();
         if (projectPath.equals(":")) {
-            BuildIdentifier build = projectId.getBuild();
-            // TODO:DAZ BuildIdentifier.name should not be ':' for current build
-            if (build.isCurrentBuild()) {
-                return DEFAULT_ROOT_MODULE_NAME;
-            }
-            return build.getName();
+            return projectId.getBuild().getName();
         }
         int index = projectPath.lastIndexOf(':');
         return projectPath.substring(index + 1);

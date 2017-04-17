@@ -49,11 +49,11 @@ class ModuleDependencyBuilderTest extends Specification {
 
     def "builds dependency for nonIdea root project"() {
         when:
-        def dependency = builder.create(new IdeProjectDependency(newProjectId(":")), 'compile')
+        def dependency = builder.create(new IdeProjectDependency(newProjectId("root-build",":")), 'compile')
 
         then:
         dependency.scope == 'compile'
-        dependency.name == "_ROOT_"
+        dependency.name == "root-build"
 
         and:
         localComponentRegistry.getAdditionalArtifacts(_) >> []
