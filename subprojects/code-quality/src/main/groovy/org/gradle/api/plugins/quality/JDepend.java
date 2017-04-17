@@ -159,13 +159,13 @@ public class JDepend extends DefaultTask implements Reporting<JDependReports> {
     @Deprecated
     @Internal
     public File getClassesDir() {
-        SingleMessageLogger.nagUserOfDiscontinuedMethod("getClassesDir()", "Use getClassesDirs() instead");
+        SingleMessageLogger.nagUserOfReplacedMethod("getClassesDir()", "getClassesDirs()");
         return CollectionUtils.single(getClassesDirs());
     }
 
     @Deprecated
     public void setClassesDir(File classesDir) {
-        SingleMessageLogger.nagUserOfDiscontinuedMethod("setClassesDir(File)", "Use setClassesDirs(Set<File>) instead");
+        SingleMessageLogger.nagUserOfReplacedMethod("setClassesDir(File)", "setClassesDirs(Set<File>)");
         setClassesDirs(getProject().files(classesDir));
     }
 }

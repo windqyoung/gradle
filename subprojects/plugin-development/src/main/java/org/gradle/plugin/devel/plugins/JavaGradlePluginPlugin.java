@@ -218,9 +218,9 @@ public class JavaGradlePluginPlugin implements Plugin<Project> {
         validator.setOutputFile(new File(validatorReportsDir, "report.txt"));
 
         final SourceSet mainSourceSet = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
-        validator.getConventionMapping().map("classesDirs", new Callable<Set<File>>() {
+        validator.getConventionMapping().map("classesDirs", new Callable<FileCollection>() {
             @Override
-            public Set<File> call() throws Exception {
+            public FileCollection call() throws Exception {
                 return mainSourceSet.getOutput().getClassesDirs();
             }
         });

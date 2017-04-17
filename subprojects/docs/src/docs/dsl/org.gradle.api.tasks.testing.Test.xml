@@ -13,6 +13,10 @@
                 <td><literal>project.sourceSets.test.output.classesDir</literal></td>
             </tr>
             <tr>
+                <td>testClassesDirs</td>
+                <td><literal>project.sourceSets.test.output.classesDirs</literal></td>
+            </tr>
+            <tr>
                 <td>binResultsDir</td>
                 <td><literal><replaceable>project.testResultsDir</replaceable>/binary/<replaceable>task.name</replaceable></literal></td>
             </tr>

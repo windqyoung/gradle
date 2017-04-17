@@ -16,7 +16,6 @@
 
 package org.gradle.api.tasks.testing;
 
-import com.google.common.collect.Sets;
 import groovy.lang.Closure;
 import org.gradle.StartParameter;
 import org.gradle.api.Action;
@@ -89,10 +88,10 @@ import org.gradle.internal.logging.ConsoleRenderer;
 import org.gradle.internal.logging.progress.ProgressLoggerFactory;
 import org.gradle.internal.logging.text.StyledTextOutputFactory;
 import org.gradle.internal.operations.BuildOperationProcessor;
-import org.gradle.internal.work.WorkerLeaseRegistry;
 import org.gradle.internal.progress.BuildOperationExecutor;
 import org.gradle.internal.reflect.Instantiator;
 import org.gradle.internal.remote.internal.inet.InetAddressFactory;
+import org.gradle.internal.work.WorkerLeaseRegistry;
 import org.gradle.listener.ClosureBackedMethodInvocationDispatch;
 import org.gradle.process.JavaForkOptions;
 import org.gradle.process.ProcessForkOptions;
@@ -100,6 +99,7 @@ import org.gradle.process.internal.DefaultJavaForkOptions;
 import org.gradle.process.internal.worker.WorkerProcessFactory;
 import org.gradle.util.CollectionUtils;
 import org.gradle.util.ConfigureUtil;
+import org.gradle.util.SingleMessageLogger;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -167,7 +167,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
     private final DefaultTestFilter filter;
 
     private TestExecuter testExecuter;
-    private Set<File> testClassesDirs;
+    private FileCollection testClassesDirs;
     private File binResultsDir;
     private PatternFilterable patternSet;
     private boolean ignoreFailures;
@@ -193,7 +193,6 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
         reports = instantiator.newInstance(DefaultTestTaskReports.class, this);
         reports.getJunitXml().setEnabled(true);
         reports.getHtml().setEnabled(true);
-        testClassesDirs = Sets.newLinkedHashSet();
 
         filter = instantiator.newInstance(DefaultTestFilter.class);
     }
@@ -869,10 +868,10 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
      */
     @Internal
     public File getTestClassesDir() {
+        SingleMessageLogger.nagUserOfReplacedMethod("getTestClassesDir()", "getTestClassesDirs()");
         if (testClassesDirs.isEmpty()) {
             return null;
         }
-        // TODO: Deprecate?
         return getProject().file(CollectionUtils.first(testClassesDirs));
     }
 
@@ -882,18 +881,23 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
      * @param testClassesDir The root folder
      */
     public void setTestClassesDir(File testClassesDir) {
-        testClassesDirs.clear();
-        testClassesDirs.add(testClassesDir);
+        SingleMessageLogger.nagUserOfReplacedMethod("setTestClassesDir(File)", "setTestClassesDirs(FileCollection)");
+        setTestClassesDirs(getProject().files(testClassesDir));
     }
 
+    /**
+     * Returns the directories for the compiled test sources.
+     *
+     * @return All test class directories to be used.
+     */
     @Internal
-    public Set<File> getTestClassesDirs() {
+    public FileCollection getTestClassesDirs() {
         return testClassesDirs;
     }
 
-    public void setTestClassesDirs(Set<File> testClassesDirs) {
-        this.testClassesDirs.clear();
-        this.testClassesDirs.addAll(testClassesDirs);
+    // TODO: Docs
+    public void setTestClassesDirs(FileCollection testClassesDirs) {
+        this.testClassesDirs = testClassesDirs;
     }
 
     /**
@@ -1177,7 +1181,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
     @PathSensitive(PathSensitivity.RELATIVE)
     @InputFiles
     public FileTree getCandidateClassFiles() {
-        return getProject().files(getTestClassesDirs()).getAsFileTree().matching(patternSet);
+        return getTestClassesDirs().getAsFileTree().matching(patternSet);
     }
 
     /**

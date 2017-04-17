@@ -256,8 +256,8 @@ public class JavaCompile extends AbstractCompile {
 
     @Override
     @CompileClasspath
-    public FileCollection getAdditionalClassesClasspath() {
-        return super.getAdditionalClassesClasspath();
+    public FileCollection getAdditionalClassesWorkaround() {
+        return super.getAdditionalClassesWorkaround();
     }
 
     /**

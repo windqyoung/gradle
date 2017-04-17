@@ -111,7 +111,7 @@ public class JDependPlugin extends AbstractCodeQualityPlugin<JDepend> {
         conventionMappingOf(task).map("classesDirs", new Callable<FileCollection>() {
             @Override
             public FileCollection call() throws Exception {
-                return project.files(sourceSet.getOutput().getClassesDirs());
+                return sourceSet.getOutput().getClassesDirs();
             }
         });
     }

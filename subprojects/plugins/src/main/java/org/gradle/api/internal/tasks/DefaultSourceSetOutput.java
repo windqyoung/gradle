@@ -30,7 +30,6 @@ import org.gradle.util.CollectionUtils;
 import java.io.File;
 import java.util.Collections;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.Callable;
 
 public class DefaultSourceSetOutput extends CompositeFileCollection implements SourceSetOutput {
@@ -38,10 +37,11 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
     private Object resourcesDir;
     private Object classesDir;
     private final DefaultConfigurableFileCollection dirs;
-    private final Map<SourceDirectorySet, Object> classesDirs;
+    private final Map<SourceDirectorySet, Object> classesDirsPerSourceDirectorySet;
+    private final DefaultConfigurableFileCollection classesDirs;
     private final FileResolver fileResolver;
 
-    public DefaultSourceSetOutput(String sourceSetDisplayName, FileResolver fileResolver, TaskResolver taskResolver) {
+    public DefaultSourceSetOutput(String sourceSetDisplayName, final FileResolver fileResolver, TaskResolver taskResolver) {
         this.fileResolver = fileResolver;
         String displayName = sourceSetDisplayName + " classes";
         outputDirectories = new DefaultConfigurableFileCollection(displayName, fileResolver, taskResolver, new Callable() {
@@ -56,7 +56,21 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
 
         dirs = new DefaultConfigurableFileCollection("dirs", fileResolver, taskResolver);
 
-        classesDirs = Maps.newLinkedHashMap();
+        classesDirsPerSourceDirectorySet = Maps.newLinkedHashMap();
+        classesDirs = new DefaultConfigurableFileCollection("classesDirs", fileResolver, taskResolver, new Callable() {
+            @Override
+            public Object call() throws Exception {
+                if (classesDir!=null) {
+                    return Collections.singleton(fileResolver.resolve(classesDir));
+                }
+                return CollectionUtils.collect(classesDirsPerSourceDirectorySet.entrySet(), new Transformer<File, Map.Entry<SourceDirectorySet, Object>>() {
+                    @Override
+                    public File transform(Map.Entry<SourceDirectorySet, Object> entry) {
+                        return fileResolver.resolve(entry.getValue());
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -73,11 +87,12 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
         if (classesDir!=null) {
             return fileResolver.resolve(classesDir);
         }
-        if (classesDirs.isEmpty()) {
+
+        if (classesDirsPerSourceDirectorySet.isEmpty()) {
             return null;
         }
         // TODO: log deprecation?
-        return fileResolver.resolve(CollectionUtils.first(classesDirs.entrySet()).getValue());
+        return fileResolver.resolve(CollectionUtils.first(classesDirsPerSourceDirectorySet.entrySet()).getValue());
     }
 
     public void setClassesDir(Object classesDir) {
@@ -86,7 +101,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
 
     @Override
     public void addClassesDir(SourceDirectorySet sourceDirectorySet, Object classesDir) {
-        classesDirs.put(sourceDirectorySet, classesDir);
+        classesDirsPerSourceDirectorySet.put(sourceDirectorySet, classesDir);
     }
 
     @Override
@@ -94,20 +109,12 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
         if (classesDir!=null) {
             return fileResolver.resolve(classesDir);
         }
-        return fileResolver.resolve(classesDirs.get(sourceDirectorySet));
+        return fileResolver.resolve(classesDirsPerSourceDirectorySet.get(sourceDirectorySet));
     }
 
     @Override
-    public Set<File> getClassesDirs() {
-        if (classesDir!=null) {
-            return Collections.singleton(fileResolver.resolve(classesDir));
-        }
-        return CollectionUtils.collect(classesDirs.entrySet(), new Transformer<File, Map.Entry<SourceDirectorySet, Object>>() {
-            @Override
-            public File transform(Map.Entry<SourceDirectorySet, Object> entry) {
-                return fileResolver.resolve(entry.getValue());
-            }
-        });
+    public FileCollection getClassesDirs() {
+        return classesDirs;
     }
 
     public File getResourcesDir() {

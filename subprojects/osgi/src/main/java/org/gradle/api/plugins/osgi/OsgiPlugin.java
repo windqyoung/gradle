@@ -20,6 +20,7 @@ import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
 import org.gradle.api.file.CopySpec;
+import org.gradle.api.file.FileCollection;
 import org.gradle.api.internal.project.ProjectInternal;
 import org.gradle.api.plugins.JavaBasePlugin;
 import org.gradle.api.plugins.JavaPlugin;
@@ -28,7 +29,6 @@ import org.gradle.api.tasks.bundling.Jar;
 import org.gradle.util.CollectionUtils;
 
 import java.io.File;
-import java.util.Set;
 
 /**
  * A {@link Plugin} which extends the {@link JavaPlugin} to add OSGi meta-information to the project Jars.
@@ -46,10 +46,10 @@ public class OsgiPlugin implements Plugin<Project> {
                 Jar jarTask = (Jar) project.getTasks().getByName("jar");
                 OsgiManifest osgiManifest = osgiConvention.osgiManifest();
 
-                final Set<File> classes = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main").getOutput().getClassesDirs();
+                final FileCollection classes = project.getConvention().getPlugin(JavaPluginConvention.class).getSourceSets().getByName("main").getOutput().getClassesDirs();
                 // When creating the OSGi manifest, we must have a single view of all of the classes included in the jar.
                 final File singleClassesDirectory;
-                if (classes.size() > 1) {
+                if (classes.getFiles().size() > 1) {
                     singleClassesDirectory = new File(jarTask.getTemporaryDir(), "osgi-classes");
                     jarTask.doFirst(new Action<Task>() {
                         @Override

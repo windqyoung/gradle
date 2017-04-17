@@ -65,7 +65,6 @@ import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Validates task property annotations.
@@ -109,7 +108,7 @@ import java.util.Set;
 @CacheableTask
 @SuppressWarnings("WeakerAccess")
 public class ValidateTaskProperties extends ConventionTask implements VerificationTask {
-    private Set<File> classesDirs;
+    private FileCollection classesDirs;
     private FileCollection classpath;
     private Object outputFile;
     private boolean ignoreFailures;
@@ -143,7 +142,7 @@ public class ValidateTaskProperties extends ConventionTask implements Verificati
             throw new RuntimeException(e);
         }
 
-        getProject().files(getClassesDirs()).getAsFileTree().visit(new EmptyFileVisitor() {
+        getClassesDirs().getAsFileTree().visit(new EmptyFileVisitor() {
             @Override
             public void visitFile(FileVisitDetails fileDetails) {
                 if (!fileDetails.getPath().endsWith(".class")) {
@@ -270,14 +269,14 @@ public class ValidateTaskProperties extends ConventionTask implements Verificati
     @PathSensitive(PathSensitivity.RELATIVE)
     @InputFiles
     @SkipWhenEmpty
-    public Set<File> getClassesDirs() {
+    public FileCollection getClassesDirs() {
         return classesDirs;
     }
 
     /**
      * Sets the directory containing the classes to validate.
      */
-    public void setClassesDirs(Set<File> classesDirs) {
+    public void setClassesDirs(FileCollection classesDirs) {
         this.classesDirs = classesDirs;
     }
 

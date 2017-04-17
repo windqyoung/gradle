@@ -186,7 +186,7 @@ public class FindBugsPlugin extends AbstractCodeQualityPlugin<FindBugs> {
         taskMapping.map("classes", new Callable<FileCollection>() {
             @Override
             public FileCollection call() {
-                return project.files(sourceSet.getOutput().getClassesDirs()).builtBy(sourceSet.getOutput());
+                return sourceSet.getOutput().getClassesDirs();
             }
         });
         taskMapping.map("classpath", new Callable<FileCollection>() {

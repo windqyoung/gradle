@@ -15,8 +15,8 @@
  */
 package org.gradle.api.tasks.compile;
 
-import com.google.common.collect.Sets;
 import org.gradle.api.file.FileCollection;
+import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
 import org.gradle.api.tasks.Internal;
@@ -24,7 +24,6 @@ import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceTask;
 
 import java.io.File;
-import java.util.Set;
 
 /**
  * The base class for all JVM-based language compilation tasks.
@@ -34,7 +33,7 @@ public abstract class AbstractCompile extends SourceTask {
     private String sourceCompatibility;
     private String targetCompatibility;
     private FileCollection classpath;
-    private Set<File> additionalClasses = Sets.newLinkedHashSet();
+    private FileCollection additionalClasses = getProject().files();
 
     protected abstract void compile();
 
@@ -114,13 +113,14 @@ public abstract class AbstractCompile extends SourceTask {
         this.targetCompatibility = targetCompatibility;
     }
 
-    /**
-     *
-     * @return additional classes to compile against.
-     */
     @Classpath
-    public FileCollection getAdditionalClassesClasspath() {
-        return getProject().files(getAdditionalClasses()).getAsFileTree();
+    public FileCollection getAdditionalClassesWorkaround() {
+        return getAdditionalClasses().filter(new Spec<File>() {
+            @Override
+            public boolean isSatisfiedBy(File element) {
+                return element.exists();
+            }
+        });
     }
 
     /**
@@ -128,14 +128,14 @@ public abstract class AbstractCompile extends SourceTask {
      * @return additional classes to compile against.
      */
     @Internal
-    public Set<File> getAdditionalClasses() {
+    public FileCollection getAdditionalClasses() {
         return additionalClasses;
     }
 
     /**
      * TODO:
      */
-    public void setAdditionalClasses(Set<File> additionalClasses) {
+    public void setAdditionalClasses(FileCollection additionalClasses) {
         this.additionalClasses = additionalClasses;
     }
 }
