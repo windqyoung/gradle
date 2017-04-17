@@ -100,10 +100,25 @@ public interface SourceSetOutput extends FileCollection {
      */
     void setClassesDir(Object classesDir);
 
+    /**
+     * TODO: Something
+     * @param sourceDirectorySet asdf
+     * @param classesDir asdf
+     */
     void addClassesDir(SourceDirectorySet sourceDirectorySet, Object classesDir);
 
+    /**
+     * TODO: Something
+     * @param sourceDirectorySet
+     * @return The classes dir. Never returns null.
+     */
     File getClassesDirFor(SourceDirectorySet sourceDirectorySet);
 
+    /**
+     * Returns the directories containing compiled classes.
+     *
+     * @return The classes directories. Never returns null.
+     */
     Set<File> getClassesDirs();
 
     /**

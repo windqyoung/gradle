@@ -30,6 +30,10 @@
                 <td><literal><replaceable>${project.buildDir}</replaceable>/classes/<replaceable>${sourceSet.name}</replaceable></literal></td>
             </tr>
             <tr>
+                <td>classesDirs</td>
+                <td><literal><replaceable>${project.buildDir}</replaceable>/classes/<replaceable>${sourceDirectorySet.name}</replaceable>/<replaceable>${sourceSet.name}</replaceable></literal></td>
+            </tr>
+            <tr>
                 <td>resourcesDir</td>
                 <td><literal><replaceable>${project.buildDir}</replaceable>/classes/<replaceable>${sourceSet.name}</replaceable></literal></td>
             </tr>
@@ -48,6 +52,9 @@
             </tr>
             <tr>
                 <td>getDirs</td>
+            </tr>
+            <tr>
+                <td>getClassesDirFor</td>
             </tr>
         </table>
     </section>

@@ -13,8 +13,8 @@
                 <td><literal>project.configurations.jdepend</literal></td>
             </tr>
             <tr>
-                <td>classesDir</td>
-                <td><literal><replaceable>sourceSet</replaceable>.output.classesDir</literal></td>
+                <td>classesDirs</td>
+                <td><literal><replaceable>sourceSet</replaceable>.output.classesDirs</literal></td>
             </tr>
             <tr>
                 <td>reports</td>

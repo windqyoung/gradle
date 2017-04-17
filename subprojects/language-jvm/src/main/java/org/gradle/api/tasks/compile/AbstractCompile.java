@@ -114,6 +114,10 @@ public abstract class AbstractCompile extends SourceTask {
         this.targetCompatibility = targetCompatibility;
     }
 
+    /**
+     *
+     * @return additional classes to compile against.
+     */
     @Classpath
     public FileCollection getAdditionalClassesClasspath() {
         return getProject().files(getAdditionalClasses()).getAsFileTree();
@@ -121,7 +125,7 @@ public abstract class AbstractCompile extends SourceTask {
 
     /**
      * TODO:
-     * @return
+     * @return additional classes to compile against.
      */
     @Internal
     public Set<File> getAdditionalClasses() {
@@ -130,7 +134,6 @@ public abstract class AbstractCompile extends SourceTask {
 
     /**
      * TODO:
-     * @return
      */
     public void setAdditionalClasses(Set<File> additionalClasses) {
         this.additionalClasses = additionalClasses;
