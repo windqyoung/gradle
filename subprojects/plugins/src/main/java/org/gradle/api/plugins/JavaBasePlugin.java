@@ -26,7 +26,6 @@ import org.gradle.api.artifacts.Configuration;
 import org.gradle.api.artifacts.ConfigurationContainer;
 import org.gradle.api.attributes.Usage;
 import org.gradle.api.execution.TaskExecutionGraph;
-import org.gradle.api.file.FileCollection;
 import org.gradle.api.file.SourceDirectorySet;
 import org.gradle.api.internal.ConventionMapping;
 import org.gradle.api.internal.IConventionAware;
@@ -69,7 +68,9 @@ import org.gradle.util.WrapUtil;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 import static org.gradle.api.attributes.Usage.*;
@@ -293,10 +294,10 @@ public class JavaBasePlugin implements Plugin<ProjectInternal> {
                 return sourceSet.getCompileClasspath();
             }
         });
-        conventionMapping.map("additionalClasses", new Callable<FileCollection>() {
+        conventionMapping.map("additionalClasses", new Callable<Set<File>>() {
             @Override
-            public FileCollection call() throws Exception {
-                return target.files(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava())).getAsFileTree();
+            public Set<File> call() throws Exception {
+                return Collections.singleton(sourceSet.getOutput().getClassesDirFor(sourceSet.getJava()));
             }
         });
         sourceSet.getOutput().addClassesDir(sourceDirectorySet, new Callable<Object>() {

@@ -15,13 +15,16 @@
  */
 package org.gradle.api.tasks.compile;
 
+import com.google.common.collect.Sets;
 import org.gradle.api.file.FileCollection;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
+import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceTask;
 
 import java.io.File;
+import java.util.Set;
 
 /**
  * The base class for all JVM-based language compilation tasks.
@@ -31,7 +34,7 @@ public abstract class AbstractCompile extends SourceTask {
     private String sourceCompatibility;
     private String targetCompatibility;
     private FileCollection classpath;
-    private FileCollection additionalClasses = getProject().files();
+    private Set<File> additionalClasses = Sets.newLinkedHashSet();
 
     protected abstract void compile();
 
@@ -111,13 +114,17 @@ public abstract class AbstractCompile extends SourceTask {
         this.targetCompatibility = targetCompatibility;
     }
 
+    @Classpath
+    public FileCollection getAdditionalClassesClasspath() {
+        return getProject().files(getAdditionalClasses()).getAsFileTree();
+    }
+
     /**
      * TODO:
      * @return
      */
-    @Classpath
-    // @Internal
-    public FileCollection getAdditionalClasses() {
+    @Internal
+    public Set<File> getAdditionalClasses() {
         return additionalClasses;
     }
 
@@ -125,7 +132,7 @@ public abstract class AbstractCompile extends SourceTask {
      * TODO:
      * @return
      */
-    public void setAdditionalClasses(FileCollection additionalClasses) {
+    public void setAdditionalClasses(Set<File> additionalClasses) {
         this.additionalClasses = additionalClasses;
     }
 }
