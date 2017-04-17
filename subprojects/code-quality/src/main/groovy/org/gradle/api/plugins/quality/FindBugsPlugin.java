@@ -186,9 +186,7 @@ public class FindBugsPlugin extends AbstractCodeQualityPlugin<FindBugs> {
         taskMapping.map("classes", new Callable<FileCollection>() {
             @Override
             public FileCollection call() {
-                // the simple "classes = sourceSet.output" may lead to non-existing resources directory
-                // being passed to FindBugs Ant task, resulting in an error
-                return project.files(sourceSet.getOutput().getClassesDirs()).builtBy(sourceSet.getOutput()).getAsFileTree();
+                return project.files(sourceSet.getOutput().getClassesDirs()).builtBy(sourceSet.getOutput());
             }
         });
         taskMapping.map("classpath", new Callable<FileCollection>() {
