@@ -79,7 +79,7 @@ class SkipCachedTaskExecuterTest extends Specification {
         }
         1 * internalTaskExecutionListener.beforeTaskOutputsGenerated()
         1 * taskOutputOriginFactory.createReader(task) >> originReader
-        1 * outputs.getFileProperties() >> ImmutableSortedSet.of()
+        1 * outputs.getFileProperties() >> ImmutableSortedSet.copyOf([]) // work around for bug?
         1 * taskOutputPacker.unpack(_, inputStream, originReader)
 
         then:
