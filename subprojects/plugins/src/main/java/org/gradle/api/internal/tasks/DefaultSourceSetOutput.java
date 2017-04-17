@@ -56,7 +56,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
 
         dirs = new DefaultConfigurableFileCollection("dirs", fileResolver, taskResolver);
 
-        classesDirs = Maps.newHashMap();
+        classesDirs = Maps.newLinkedHashMap();
     }
 
     @Override
