@@ -82,7 +82,7 @@ class JDependPluginTest extends AbstractProjectBuilderSpec {
 
         expect:
         task.description == null
-        task.classesDir == null
+        task.classesDirs == null
         task.jdependClasspath == project.configurations.jdepend
         task.reports.xml.destination == project.file("build/reports/jdepend/custom.xml")
     }
@@ -129,7 +129,7 @@ class JDependPluginTest extends AbstractProjectBuilderSpec {
 
         expect:
         task.description == null
-        task.classesDir == null
+        task.classesDirs == null
         task.jdependClasspath == project.configurations.jdepend
         task.reports.xml.destination == project.file("jdepend-reports/custom.xml")
     }
