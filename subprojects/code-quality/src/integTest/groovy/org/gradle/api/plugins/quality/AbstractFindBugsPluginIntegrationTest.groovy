@@ -137,8 +137,8 @@ abstract class AbstractFindBugsPluginIntegrationTest extends AbstractIntegration
 
         expect:
         succeeds("check")
-        file("build/reports/findbugs/main.xml").assertContents(containsClass("org/gradle/Class1"))
-        file("build/reports/findbugs/test.xml").assertContents(containsClass("org/gradle/Class1Test"))
+        file("build/reports/findbugs/main.xml").assertContents(containsClass("Class1.java"))
+        file("build/reports/findbugs/test.xml").assertContents(containsClass("Class1Test.java"))
     }
 
     void "excludes baseline bug for matching bug instance"() {
