@@ -22,7 +22,7 @@ import org.gradle.api.Transformer;
 import org.gradle.internal.Transformers;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.concurrent.GradleThread;
-import org.gradle.internal.logging.events.OperationIdentifier;
+import org.gradle.internal.operations.OperationIdentifier;
 import org.gradle.internal.logging.progress.ProgressLogger;
 import org.gradle.internal.logging.progress.ProgressLoggerFactory;
 import org.gradle.internal.operations.BuildOperationContext;
