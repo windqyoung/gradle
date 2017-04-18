@@ -77,7 +77,7 @@ class JavaGradlePluginPluginTestKitSetupIntegrationTest extends AbstractIntegrat
             }
 
             task functionalTest(type: Test) {
-                testClassesDir = sourceSets.functionalTest.output.classesDir
+                testClassesDirs = sourceSets.functionalTest.output.classesDirs
                 classpath = sourceSets.functionalTest.runtimeClasspath
             }
 
