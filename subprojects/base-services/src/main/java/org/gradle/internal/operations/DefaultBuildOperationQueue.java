@@ -18,8 +18,13 @@ package org.gradle.internal.operations;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
-import com.google.common.util.concurrent.*;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.gradle.internal.UncheckedException;
+import org.gradle.internal.progress.BuildOperationDescriptor;
 import org.gradle.internal.work.WorkerLeaseRegistry;
 import org.gradle.internal.work.WorkerLeaseService;
 
@@ -31,11 +36,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-class DefaultBuildOperationQueue<T extends BuildOperation> implements BuildOperationQueue<T> {
+class DefaultBuildOperationQueue<O extends BuildOperation> implements BuildOperationQueue<O> {
     private final WorkerLeaseService workerLeases;
     private final WorkerLeaseRegistry.WorkerLease parentWorkerLease;
     private final ListeningExecutorService executor;
-    private final BuildOperationWorker<T> worker;
+    private final BuildOperationWorker<O> worker;
 
     private final List<QueuedOperation> operations;
 
@@ -44,7 +49,7 @@ class DefaultBuildOperationQueue<T extends BuildOperation> implements BuildOpera
     private final AtomicBoolean waitingForCompletion = new AtomicBoolean();
     private final AtomicBoolean canceled = new AtomicBoolean();
 
-    DefaultBuildOperationQueue(WorkerLeaseService workerLeases, ExecutorService executor, BuildOperationWorker<T> worker) {
+    DefaultBuildOperationQueue(WorkerLeaseService workerLeases, ExecutorService executor, BuildOperationWorker<O> worker) {
         this.workerLeases = workerLeases;
         this.parentWorkerLease = workerLeases.getWorkerLease();
         this.executor = MoreExecutors.listeningDecorator(executor);
@@ -53,7 +58,7 @@ class DefaultBuildOperationQueue<T extends BuildOperation> implements BuildOpera
     }
 
     @Override
-    public void add(final T operation) {
+    public void add(final O operation) {
         if (waitingForCompletion.get()) {
             throw new IllegalStateException("BuildOperationQueue cannot be reused once it has started completion.");
         }
@@ -155,10 +160,11 @@ class DefaultBuildOperationQueue<T extends BuildOperation> implements BuildOpera
 
     private class OperationHolder implements Runnable {
         private final WorkerLeaseRegistry.WorkerLease parentWorkerLease;
-        private final T operation;
+        private final O operation;
         private final AtomicBoolean started = new AtomicBoolean();
+        private BuildOperationDescriptor operationDescription;
 
-        OperationHolder(WorkerLeaseRegistry.WorkerLease parentWorkerLease, T operation) {
+        OperationHolder(WorkerLeaseRegistry.WorkerLease parentWorkerLease, O operation) {
             this.parentWorkerLease = parentWorkerLease;
             this.operation = operation;
         }
@@ -187,7 +193,10 @@ class DefaultBuildOperationQueue<T extends BuildOperation> implements BuildOpera
 
         @Override
         public String toString() {
-            return "Worker ".concat(worker.getDisplayName()).concat(" for operation ").concat(operation.getDescription());
+            if (operationDescription == null) {
+                operationDescription = operation.description().build();
+            }
+            return "Worker ".concat(worker.getDisplayName()).concat(" for operation ").concat(operationDescription.getDisplayName());
         }
     }
 }

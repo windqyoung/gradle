@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 the original author or authors.
+ * Copyright 2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +21,25 @@ import org.gradle.api.Nullable;
 /**
  * Meta-data about a build operation.
  */
-public class BuildOperationDetails {
-    private final BuildOperationExecutor.Operation parent;
+public class BuildOperationDescriptor {
+    private final Object id;
+    private final Object parentId;
     private final String displayName;
     private final String name;
     private final String progressDisplayName;
-    private final Object operationDescriptor;
+    private final Object details;
 
-    private BuildOperationDetails(BuildOperationExecutor.Operation parent, String name, String displayName, String progressDisplayName, Object operationDescriptor) {
-        this.parent = parent;
+    protected BuildOperationDescriptor(Object id, Object parentId, String name, String displayName, String progressDisplayName, Object details) {
+        this.id = id;
+        this.parentId = parentId;
         this.name = name;
         this.displayName = displayName;
         this.progressDisplayName = progressDisplayName;
-        this.operationDescriptor = operationDescriptor;
+        this.details = details;
+    }
+
+    public Object getId() {
+        return id;
     }
 
     /**
@@ -68,16 +74,16 @@ public class BuildOperationDetails {
      * Arbitrary metadata for the operation.
      */
     @Nullable
-    public Object getOperationDescriptor() {
-        return operationDescriptor;
+    public Object getDetails() {
+        return details;
     }
 
     /**
      * The parent for the operation, if any. When null, the operation of the current thread is used.
      */
     @Nullable
-    public BuildOperationExecutor.Operation getParent() {
-        return parent;
+    public Object getParentId() {
+        return parentId;
     }
 
     public static Builder displayName(String displayName) {
@@ -87,9 +93,10 @@ public class BuildOperationDetails {
     public static class Builder {
         private final String displayName;
         private String name;
-        private BuildOperationExecutor.Operation parent;
         private String progressDisplayName;
         private Object operationDescriptor;
+        private Object id;
+        private Object parentId;
 
         private Builder(String displayName) {
             this.displayName = displayName;
@@ -111,13 +118,18 @@ public class BuildOperationDetails {
             return this;
         }
 
-        public Builder parent(BuildOperationExecutor.Operation parent) {
-            this.parent = parent;
+        public Builder parentId(Object parentId) {
+            this.parentId = parentId;
             return this;
         }
 
-        public BuildOperationDetails build() {
-            return new BuildOperationDetails(parent, name, displayName, progressDisplayName, operationDescriptor);
+        public Builder id(Object id) {
+            this.id = id;
+            return this;
+        }
+
+        public BuildOperationInternal build() {
+            return new BuildOperationInternal(id, parentId, name, displayName, progressDisplayName, operationDescriptor);
         }
     }
 }

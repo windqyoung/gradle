@@ -20,23 +20,29 @@ import org.gradle.api.GradleException
 import org.gradle.internal.concurrent.DefaultExecutorFactory
 import org.gradle.internal.concurrent.ExecutorFactory
 import org.gradle.internal.exceptions.DefaultMultiCauseException
-import org.gradle.internal.progress.TestBuildOperationExecutor
+import org.gradle.internal.logging.progress.ProgressLoggerFactory
+import org.gradle.internal.progress.BuildOperationDescriptor
+import org.gradle.internal.progress.BuildOperationListener
+import org.gradle.internal.progress.DefaultBuildOperationExecutor
 import org.gradle.internal.resources.DefaultResourceLockCoordinationService
-import org.gradle.internal.work.WorkerLeaseRegistry
+import org.gradle.internal.time.TimeProvider
 import org.gradle.internal.work.DefaultWorkerLeaseService
+import org.gradle.internal.work.WorkerLeaseRegistry
 import org.gradle.test.fixtures.concurrent.ConcurrentSpec
 import spock.lang.Unroll
 
-class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
+class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec {
 
     WorkerLeaseRegistry workerRegistry
-    BuildOperationProcessor buildOperationProcessor
+    BuildOperationExecutor buildOperationExecutor
     WorkerLeaseRegistry.WorkerLeaseCompletion outerOperationCompletion
     WorkerLeaseRegistry.WorkerLease outerOperation
 
-    def setupBuildOperationProcessor(int maxThreads) {
+    def setupBuildOperationExecutor(int maxThreads) {
         workerRegistry = new DefaultWorkerLeaseService(new DefaultResourceLockCoordinationService(), true, maxThreads)
-        buildOperationProcessor = new DefaultBuildOperationProcessor(new TestBuildOperationExecutor(), new DefaultBuildOperationQueueFactory(workerRegistry), new DefaultExecutorFactory(), maxThreads)
+        buildOperationExecutor = new DefaultBuildOperationExecutor(
+            Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
+            new DefaultBuildOperationQueueFactory(workerRegistry), new DefaultExecutorFactory(), maxThreads)
         outerOperationCompletion = workerRegistry.getWorkerLease().start()
         outerOperation = workerRegistry.getCurrentWorkerLease()
     }
@@ -51,17 +57,17 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
     @Unroll
     def "all #operations operations run to completion when using #maxThreads threads"() {
         given:
-        setupBuildOperationProcessor(maxThreads)
+        setupBuildOperationExecutor(maxThreads)
         def operation = Mock(DefaultBuildOperationQueueTest.TestBuildOperation)
         def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
 
         when:
-        buildOperationProcessor.run(worker, { queue ->
+        buildOperationExecutor.runAll(worker, { queue ->
             operations.times { queue.add(operation) }
         })
 
         then:
-        operations * operation.run()
+        operations * operation.run(_)
 
         where:
         // Where operations < maxThreads
@@ -80,7 +86,7 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
     def "all work run to completion for multiple queues when using multiple threads #maxThreads"() {
         given:
         def amountOfWork = 10
-        setupBuildOperationProcessor(maxThreads)
+        setupBuildOperationExecutor(maxThreads)
         def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
         def numberOfQueues = 5
         def operations = [
@@ -96,7 +102,7 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
             numberOfQueues.times { i ->
                 start {
                     def cl = outerOperation.startChild()
-                    buildOperationProcessor.run(worker, { queue ->
+                    buildOperationExecutor.runAll(worker, { queue ->
                         amountOfWork.times {
                             queue.add(operations[i])
                         }
@@ -108,7 +114,7 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
 
         then:
         operations.each { operation ->
-            amountOfWork * operation.run()
+            amountOfWork * operation.run(_)
         }
 
         where:
@@ -119,10 +125,10 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
         given:
         def amountOfWork = 10
         def maxThreads = 4
-        setupBuildOperationProcessor(maxThreads)
+        setupBuildOperationExecutor(maxThreads)
         def success = Stub(DefaultBuildOperationQueueTest.TestBuildOperation)
         def failure = Stub(DefaultBuildOperationQueueTest.TestBuildOperation) {
-            run() >> { throw new Exception() }
+            run(_) >> { throw new Exception() }
         }
         def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
         boolean successfulQueueCompleted = false
@@ -133,7 +139,7 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
             // Successful queue
             start {
                 def cl = outerOperation.startChild()
-                buildOperationProcessor.run(worker, { queue ->
+                buildOperationExecutor.runAll(worker, { queue ->
                     amountOfWork.times {
                         queue.add(success)
                     }
@@ -145,7 +151,7 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
             start {
                 def cl = outerOperation.startChild()
                 try {
-                    buildOperationProcessor.run(worker, { queue ->
+                    buildOperationExecutor.runAll(worker, { queue ->
                         amountOfWork.times {
                             queue.add(failure)
                         }
@@ -168,16 +174,16 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
     def "multiple failures get reported"() {
         given:
         def threadCount = 4
-        setupBuildOperationProcessor(threadCount)
+        setupBuildOperationExecutor(threadCount)
         def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
         def operation = Stub(DefaultBuildOperationQueueTest.TestBuildOperation) {
-            run() >> {
+            run(_) >> {
                 throw new GradleException("always fails")
             }
         }
 
         when:
-        buildOperationProcessor.run(worker, { queue ->
+        buildOperationExecutor.runAll(worker, { queue ->
             threadCount.times { queue.add(operation) }
         })
 
@@ -192,12 +198,14 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
         def buildOperationQueueFactory = Mock(BuildOperationQueueFactory) {
             create(_, _) >> { buildQueue }
         }
-        def buildOperationProcessor = new DefaultBuildOperationProcessor(new TestBuildOperationExecutor(), buildOperationQueueFactory, Stub(ExecutorFactory), 1)
+
+        def buildOperationExecutor = new DefaultBuildOperationExecutor(Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
+            buildOperationQueueFactory, Stub(ExecutorFactory), 1)
         def worker = Stub(BuildOperationWorker)
         def operation = Mock(DefaultBuildOperationQueueTest.TestBuildOperation)
 
         when:
-        buildOperationProcessor.run(worker, { queue ->
+        buildOperationExecutor.runAll(worker, { queue ->
             4.times { queue.add(operation) }
             throw new Exception("Failure in generator")
         })
@@ -218,12 +226,14 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
         def buildOperationQueueFactory = Mock(BuildOperationQueueFactory) {
             create(_, _) >> { buildQueue }
         }
-        def buildOperationProcessor = new DefaultBuildOperationProcessor(new TestBuildOperationExecutor(), buildOperationQueueFactory, Stub(ExecutorFactory), 1)
+        def buildOperationExecutor = new DefaultBuildOperationExecutor(
+            Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
+            buildOperationQueueFactory, Stub(ExecutorFactory), 1)
         def worker = Stub(BuildOperationWorker)
         def operation = Mock(DefaultBuildOperationQueueTest.TestBuildOperation)
 
         when:
-        buildOperationProcessor.run(worker, { queue ->
+        buildOperationExecutor.runAll(worker, { queue ->
             4.times { queue.add(operation) }
             throw new Exception("Failure in generator")
         })
@@ -245,15 +255,112 @@ class DefaultBuildOperationProcessorTest extends ConcurrentSpec {
 
     def "can provide only runnable build operations to the processor"() {
         given:
-        setupBuildOperationProcessor(2)
-        def operation = Mock(RunnableBuildOperation)
+        setupBuildOperationExecutor(2)
+        def operation = Spy(DefaultBuildOperationQueueTest.Success)
 
         when:
-        buildOperationProcessor.run({ queue ->
+        buildOperationExecutor.runAll({ queue ->
             5.times { queue.add(operation) }
         })
 
         then:
-        5 * operation.run()
+        5 * operation.run(_)
+    }
+
+    def "can be used on unmanaged threads"() {
+        given:
+        setupBuildOperationExecutor(2)
+        def operation = Spy(DefaultBuildOperationQueueTest.Success)
+
+        when:
+        async {
+            buildOperationExecutor.runAll({ queue ->
+                5.times { queue.add(operation) }
+            })
+        }
+
+        then:
+        5 * operation.run(_)
+    }
+
+    def "unmanaged thread operation is started and stopped when created by run"() {
+        given:
+        setupBuildOperationExecutor(2)
+        BuildOperationState operationState
+
+        when:
+        async {
+            buildOperationExecutor.run(new DefaultBuildOperationQueueTest.TestBuildOperation() {
+                void run(BuildOperationContext context) {
+                    operationState = buildOperationExecutor.getCurrentOperation()
+                    assert operationState.running
+                    assert operationState.parent.running
+                    assert operationState.parent.description.id.id < 0
+                }
+            })
+        }
+
+        then:
+        operationState != null
+        !operationState.running
+        !operationState.parent.running
+    }
+
+    def "unmanaged thread operation is started and stopped when created by call"() {
+        given:
+        setupBuildOperationExecutor(2)
+        BuildOperationState operationState
+
+        when:
+        async {
+            buildOperationExecutor.call(new CallableBuildOperation() {
+                Object call(BuildOperationContext context) {
+                    operationState = buildOperationExecutor.getCurrentOperation()
+                    assert operationState.running
+                    assert operationState.parent.running
+                    assert operationState.parent.description.id.id < 0
+                    return null
+                }
+
+                BuildOperationDescriptor.Builder description() {
+                    BuildOperationDescriptor.displayName("test operation")
+                }
+            })
+        }
+
+        then:
+        operationState != null
+        !operationState.running
+        !operationState.parent.running
+    }
+
+    def "a single unmanaged thread operation is started and stopped when created by runAll"() {
+        given:
+        setupBuildOperationExecutor(2)
+        BuildOperationState operationState
+        BuildOperationState parentOperationState
+
+        when:
+        async {
+            buildOperationExecutor.runAll({ queue ->
+                5.times {
+                    queue.add(new DefaultBuildOperationQueueTest.TestBuildOperation() {
+                        void run(BuildOperationContext context) {
+                            operationState = buildOperationExecutor.getCurrentOperation()
+                            assert parentOperationState == null || parentOperationState == operationState.parent
+                            parentOperationState = operationState.parent
+                            assert operationState.running
+                            assert parentOperationState.running
+                            assert operationState.parent.description.id.id < 0
+                        }
+                    })
+                }
+            })
+        }
+
+        then:
+        operationState != null
+        !operationState.running
+        !operationState.parent.running
     }
 }
