@@ -172,11 +172,11 @@ project(':other') {
           -api
           -model
         -services
-          -util
+          -utilities (renamed by user to 'util')
         -util
         -contrib
           -services
-            -utilities (renamed by user to 'util'
+            -util
       */
 
         def settingsFile = file("master/settings.gradle")
@@ -232,12 +232,12 @@ project(':services:utilities') {
         moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "shared-api")
         moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "very-cool-model")
 
-        moduleDeps = parseIml("master/services/utilities/master-services-util.iml").dependencies
+        moduleDeps = parseIml("master/services/utilities/util.iml").dependencies
         assert moduleDeps.modules.size() == 12
         moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "shared-api")
         moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "very-cool-model")
         moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "master-util")
-        moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "contrib-services-util")
+        moduleDeps.assertHasModule(['PROVIDED', 'RUNTIME','TEST'], "services-util")
     }
 
     def assertIprContainsCorrectModules() {
@@ -245,8 +245,8 @@ project(':services:utilities') {
 
         ['master.iml',
          'shared-api.iml', 'shared.iml',
-         'master-services.iml', 'master-services-util.iml',
-         'contrib-services-util.iml', 'contrib.iml', 'contrib-services.iml',
+         'master-services.iml', 'services-util.iml',
+         'util.iml', 'contrib.iml', 'contrib-services.iml',
          'very-cool-model.iml',
          'master-api.iml',
          'master-util.iml'].each {
