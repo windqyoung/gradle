@@ -71,6 +71,8 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
                 });
             }
         });
+        // TODO: This should be more specific to just the tasks that create the class files?
+        classesDirs.builtBy(this);
     }
 
     @Override

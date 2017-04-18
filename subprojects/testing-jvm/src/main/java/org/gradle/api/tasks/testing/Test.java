@@ -869,7 +869,7 @@ public class Test extends ConventionTask implements JavaForkOptions, PatternFilt
     @Internal
     public File getTestClassesDir() {
         SingleMessageLogger.nagUserOfReplacedMethod("getTestClassesDir()", "getTestClassesDirs()");
-        if (testClassesDirs.isEmpty()) {
+        if (testClassesDirs==null || testClassesDirs.isEmpty()) {
             return null;
         }
         return getProject().file(CollectionUtils.first(testClassesDirs));

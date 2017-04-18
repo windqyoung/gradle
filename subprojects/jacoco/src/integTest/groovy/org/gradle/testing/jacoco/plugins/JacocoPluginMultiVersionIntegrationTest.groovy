@@ -167,7 +167,7 @@ public class ThingTest {
 
             task otherTests(type: Test) {
                 binResultsDir file("bin")
-                testClassesDir = sourceSets.otherTest.output.classesDir
+                testClassesDirs = sourceSets.otherTest.output.classesDirs
                 classpath = sourceSets.otherTest.runtimeClasspath
             }
 
