@@ -34,11 +34,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class DefaultFileSystemMirror extends BuildAdapter implements FileSystemMirror, TaskOutputsGenerationListener {
     // Maps from interned absolute path for a file to known details for the file.
-    private final Map<String, FileSnapshot> files = new ConcurrentHashMap<String, FileSnapshot>();
-    private final Map<String, FileSnapshot> cacheFiles = new ConcurrentHashMap<String, FileSnapshot>();
+    private final Map<String, SnapshottableFileSystemResource> files = new ConcurrentHashMap<String, SnapshottableFileSystemResource>();
+    private final Map<String, SnapshottableFileSystemResource> cacheFiles = new ConcurrentHashMap<String, SnapshottableFileSystemResource>();
     // Maps from interned absolute path for a directory to known details for the directory.
-    private final Map<String, FileTreeSnapshot> trees = new ConcurrentHashMap<String, FileTreeSnapshot>();
-    private final Map<String, FileTreeSnapshot> cacheTrees = new ConcurrentHashMap<String, FileTreeSnapshot>();
+    private final Map<String, SnapshottableDirectoryTree> trees = new ConcurrentHashMap<String, SnapshottableDirectoryTree>();
+    private final Map<String, SnapshottableDirectoryTree> cacheTrees = new ConcurrentHashMap<String, SnapshottableDirectoryTree>();
     // Maps from interned absolute path to a snapshot
     private final Map<String, Snapshot> snapshots = new ConcurrentHashMap<String, Snapshot>();
     private final Map<String, Snapshot> cacheSnapshots = new ConcurrentHashMap<String, Snapshot>();
@@ -56,7 +56,7 @@ public class DefaultFileSystemMirror extends BuildAdapter implements FileSystemM
 
     @Nullable
     @Override
-    public FileSnapshot getFile(String path) {
+    public SnapshottableFileSystemResource getFile(String path) {
         // Could potentially also look whether we have the details for an ancestor directory tree
         // Could possibly infer that the path refers to a directory, if we have details for a descendant path (and it's not a missing file)
         if (cachedDirectories.contains(path)) {
@@ -67,7 +67,7 @@ public class DefaultFileSystemMirror extends BuildAdapter implements FileSystemM
     }
 
     @Override
-    public void putFile(FileSnapshot file) {
+    public void putFile(SnapshottableFileSystemResource file) {
         if (cachedDirectories.contains(file.getPath())) {
             cacheFiles.put(file.getPath(), file);
         } else {
@@ -96,7 +96,7 @@ public class DefaultFileSystemMirror extends BuildAdapter implements FileSystemM
 
     @Nullable
     @Override
-    public FileTreeSnapshot getDirectoryTree(String path) {
+    public SnapshottableDirectoryTree getDirectoryTree(String path) {
         // Could potentially also look whether we have the details for an ancestor directory tree
         // Could possibly also short-circuit some scanning if we have details for some sub trees
         if (cachedDirectories.contains(path)) {
@@ -107,7 +107,7 @@ public class DefaultFileSystemMirror extends BuildAdapter implements FileSystemM
     }
 
     @Override
-    public void putDirectory(FileTreeSnapshot directory) {
+    public void putDirectory(SnapshottableDirectoryTree directory) {
         if (cachedDirectories.contains(directory.getPath())) {
             cacheTrees.put(directory.getPath(), directory);
         } else {
