@@ -15,6 +15,7 @@
  */
 package org.gradle.language.nativeplatform.tasks;
 
+import com.google.common.collect.Lists;
 import org.gradle.api.DefaultTask;
 import org.gradle.api.Incubating;
 import org.gradle.api.file.ConfigurableFileCollection;
@@ -43,8 +44,10 @@ import org.gradle.nativeplatform.toolchain.internal.PlatformToolProvider;
 
 import javax.inject.Inject;
 import java.io.File;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
 /**
@@ -169,9 +172,19 @@ public abstract class AbstractNativeCompileTask extends DefaultTask {
     /**
      * Returns the header directories to be used for compilation.
      */
-    @Input
+    @Internal
     public FileCollection getIncludes() {
         return includes;
+    }
+
+    @Input
+    protected Collection<String> getIncludePaths() {
+        Set<File> roots = includes.getFiles();
+        List<String> includePaths = Lists.newArrayListWithCapacity(roots.size());
+        for (File root : roots) {
+            includePaths.add(root.getAbsolutePath());
+        }
+        return includePaths;
     }
 
     /**
