@@ -17,7 +17,6 @@
 package org.gradle.api.tasks.compile;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import org.gradle.api.InvalidUserDataException;
 import org.gradle.api.file.FileCollection;
@@ -84,7 +83,7 @@ public class GroovyCompile extends AbstractCompile {
         spec.setDestinationDir(getDestinationDir());
         spec.setWorkingDir(getProject().getProjectDir());
         spec.setTempDir(getTemporaryDir());
-        spec.setCompileClasspath(ImmutableList.copyOf(Iterables.concat(getAdditionalClasses(), getClasspath())));
+        spec.setCompileClasspath(ImmutableList.copyOf(getClasspath()));
         spec.setSourceCompatibility(getSourceCompatibility());
         spec.setTargetCompatibility(getTargetCompatibility());
         spec.setAnnotationProcessorPath(calculateAnnotationProcessorClasspath());

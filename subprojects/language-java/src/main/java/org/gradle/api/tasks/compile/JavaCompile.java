@@ -17,7 +17,6 @@
 package org.gradle.api.tasks.compile;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import org.gradle.api.AntBuilder;
 import org.gradle.api.Incubating;
 import org.gradle.api.JavaVersion;
@@ -230,7 +229,7 @@ public class JavaCompile extends AbstractCompile {
         spec.setDestinationDir(getDestinationDir());
         spec.setWorkingDir(getProject().getProjectDir());
         spec.setTempDir(getTemporaryDir());
-        spec.setCompileClasspath(ImmutableList.copyOf(Iterables.concat(getAdditionalClasses(), getClasspath())));
+        spec.setCompileClasspath(ImmutableList.copyOf(getClasspath()));
         spec.setAnnotationProcessorPath(ImmutableList.copyOf(getEffectiveAnnotationProcessorPath()));
         spec.setTargetCompatibility(getTargetCompatibility());
         spec.setSourceCompatibility(getSourceCompatibility());
@@ -252,12 +251,6 @@ public class JavaCompile extends AbstractCompile {
     @CompileClasspath
     public FileCollection getClasspath() {
         return super.getClasspath();
-    }
-
-    @Override
-    @CompileClasspath
-    public FileCollection getAdditionalClassesWorkaround() {
-        return super.getAdditionalClassesWorkaround();
     }
 
     /**

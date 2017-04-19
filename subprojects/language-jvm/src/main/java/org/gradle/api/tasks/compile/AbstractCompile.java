@@ -16,10 +16,8 @@
 package org.gradle.api.tasks.compile;
 
 import org.gradle.api.file.FileCollection;
-import org.gradle.api.specs.Spec;
 import org.gradle.api.tasks.Classpath;
 import org.gradle.api.tasks.Input;
-import org.gradle.api.tasks.Internal;
 import org.gradle.api.tasks.OutputDirectory;
 import org.gradle.api.tasks.SourceTask;
 
@@ -33,7 +31,6 @@ public abstract class AbstractCompile extends SourceTask {
     private String sourceCompatibility;
     private String targetCompatibility;
     private FileCollection classpath;
-    private FileCollection additionalClasses = getProject().files();
 
     protected abstract void compile();
 
@@ -111,31 +108,5 @@ public abstract class AbstractCompile extends SourceTask {
      */
     public void setTargetCompatibility(String targetCompatibility) {
         this.targetCompatibility = targetCompatibility;
-    }
-
-    @Classpath
-    public FileCollection getAdditionalClassesWorkaround() {
-        return getAdditionalClasses().filter(new Spec<File>() {
-            @Override
-            public boolean isSatisfiedBy(File element) {
-                return element.exists();
-            }
-        });
-    }
-
-    /**
-     * TODO:
-     * @return additional classes to compile against.
-     */
-    @Internal
-    public FileCollection getAdditionalClasses() {
-        return additionalClasses;
-    }
-
-    /**
-     * TODO:
-     */
-    public void setAdditionalClasses(FileCollection additionalClasses) {
-        this.additionalClasses = additionalClasses;
     }
 }
