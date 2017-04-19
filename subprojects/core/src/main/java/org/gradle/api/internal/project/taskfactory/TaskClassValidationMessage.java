@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 the original author or authors.
+ * Copyright 2017 the original author or authors.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package org.gradle.performance.fixture;
+package org.gradle.api.internal.project.taskfactory;
 
-import org.gradle.performance.measure.MeasuredOperation;
+public class TaskClassValidationMessage {
+    private final String message;
 
-import java.io.File;
+    public TaskClassValidationMessage(String message) {
+        this.message = message;
+    }
 
-public class BuildExperimentListenerAdapter implements BuildExperimentListener {
-    @Override
-    public void beforeExperiment(BuildExperimentSpec experimentSpec, File projectDir) {
+    public String getMessage() {
+        return message;
+    }
 
+    public static TaskClassValidationMessage property(String name, String message) {
+        return new TaskClassValidationMessage(String.format("property '%s': %s", name, message));
     }
 
     @Override
-    public void beforeInvocation(BuildExperimentInvocationInfo invocationInfo) {
-
-    }
-
-    @Override
-    public void afterInvocation(BuildExperimentInvocationInfo invocationInfo, MeasuredOperation operation, MeasurementCallback measurementCallback) {
-
+    public String toString() {
+        return message;
     }
 }
