@@ -76,8 +76,8 @@ class ScalaPluginTest {
         assertThat(task.description, equalTo('Compiles the test Scala source.'))
         assertThat(task.classpath.files as List, equalTo([
             testSourceSet.output.getClassesDirFor(testSourceSet.java),
-            mainSourceSet.output.getClassesDirFor(mainSourceSet.scala),
             mainSourceSet.output.getClassesDirFor(mainSourceSet.java),
+            mainSourceSet.output.getClassesDirFor(mainSourceSet.scala),
             mainSourceSet.output.resourcesDir
         ]))
         assertThat(task.source as List, equalTo(testSourceSet.scala as List))

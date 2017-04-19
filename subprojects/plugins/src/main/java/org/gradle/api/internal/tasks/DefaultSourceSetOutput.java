@@ -29,6 +29,7 @@ import org.gradle.util.CollectionUtils;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -63,7 +64,7 @@ public class DefaultSourceSetOutput extends CompositeFileCollection implements S
                 if (classesDir!=null) {
                     return Collections.singleton(fileResolver.resolve(classesDir));
                 }
-                return CollectionUtils.collect(classesDirsPerSourceDirectorySet.entrySet(), new Transformer<File, Map.Entry<SourceDirectorySet, Object>>() {
+                return CollectionUtils.collect(classesDirsPerSourceDirectorySet.entrySet(), new LinkedHashSet<File>(), new Transformer<File, Map.Entry<SourceDirectorySet, Object>>() {
                     @Override
                     public File transform(Map.Entry<SourceDirectorySet, Object> entry) {
                         return fileResolver.resolve(entry.getValue());
