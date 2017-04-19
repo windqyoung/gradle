@@ -19,7 +19,9 @@ package org.gradle.process.internal.worker;
 import org.gradle.api.logging.LogLevel;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.classloader.ClasspathUtil;
+import org.gradle.internal.operations.OperationIdentifierRegistry;
 import org.gradle.process.internal.JavaExecHandleBuilder;
+import org.gradle.process.internal.worker.request.OperationIdentifierProtocol;
 import org.gradle.process.internal.worker.request.Receiver;
 import org.gradle.process.internal.worker.request.RequestProtocol;
 import org.gradle.process.internal.worker.request.ResponseProtocol;
@@ -119,7 +121,7 @@ class DefaultMultiRequestWorkerProcessBuilder<WORKER> implements MultiRequestWor
         return workerType.cast(Proxy.newProxyInstance(workerType.getClassLoader(), new Class[]{workerType}, new InvocationHandler() {
             private Receiver receiver = new Receiver(getBaseName());
             private RequestProtocol requestProtocol;
-
+            private OperationIdentifierProtocol operationIdentifierProtocol;
 
             @Override
             public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
@@ -132,6 +134,7 @@ class DefaultMultiRequestWorkerProcessBuilder<WORKER> implements MultiRequestWor
                     workerProcess.getConnection().addIncoming(ResponseProtocol.class, receiver);
                     workerProcess.getConnection().useJavaSerializationForParameters(workerImplementation.getClassLoader());
                     requestProtocol = workerProcess.getConnection().addOutgoing(RequestProtocol.class);
+                    operationIdentifierProtocol = workerProcess.getConnection().addOutgoing(OperationIdentifierProtocol.class);
                     workerProcess.getConnection().connect();
                     return workerProcess;
                 }
@@ -143,8 +146,11 @@ class DefaultMultiRequestWorkerProcessBuilder<WORKER> implements MultiRequestWor
                         return workerProcess.waitForStop();
                     } finally {
                         requestProtocol = null;
+                        operationIdentifierProtocol = null;
                     }
                 }
+
+                operationIdentifierProtocol.operationIdentifier(OperationIdentifierRegistry.getCurrentOperationIdentifier());
                 requestProtocol.run(method.getName(), method.getParameterTypes(), args);
                 boolean hasResult = receiver.awaitNextResult();
                 if (!hasResult) {

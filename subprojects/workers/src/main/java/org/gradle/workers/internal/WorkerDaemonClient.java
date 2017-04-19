@@ -45,6 +45,7 @@ class WorkerDaemonClient<T extends WorkSpec> implements Worker<T>, Stoppable {
         WorkerLeaseCompletion workerLease = parentWorkerWorkerLease.startChild();
         try {
             BuildOperationDetails buildOperation = BuildOperationDetails.displayName(spec.getDisplayName()).parent(parentBuildOperation).build();
+            // TODO(EW): consider how to update operation id here
             return buildOperationExecutor.run(buildOperation, new Transformer<DefaultWorkResult, BuildOperationContext>() {
                 @Override
                 public DefaultWorkResult transform(BuildOperationContext buildOperationContext) {
