@@ -194,6 +194,8 @@ public class DefaultProject extends AbstractPluginAware implements ProjectIntern
     private final Path path;
     private Path identityPath;
 
+    private ConfigureProjectBuildOperationDescriptor configureProjectBuildOperationDescriptor;
+
     public DefaultProject(String name,
                           ProjectInternal parent,
                           File projectDir,
@@ -527,6 +529,14 @@ public class DefaultProject extends AbstractPluginAware implements ProjectIntern
             }
         }
         return identityPath;
+    }
+
+    @Override
+    public ConfigureProjectBuildOperationDescriptor getConfigureProjectBuildOperationDescriptor() {
+        if (configureProjectBuildOperationDescriptor == null) {
+            configureProjectBuildOperationDescriptor = new ConfigureProjectBuildOperationDescriptor(name, projectDir, getBuildFile(), path);
+        }
+        return configureProjectBuildOperationDescriptor;
     }
 
     @Override

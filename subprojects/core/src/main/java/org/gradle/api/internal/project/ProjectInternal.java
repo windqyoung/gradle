@@ -109,5 +109,5 @@ public interface ProjectInternal extends Project, ProjectIdentifier, FileOperati
      */
     Path getIdentityPath();
 
-
+    ConfigureProjectBuildOperationDescriptor getConfigureProjectBuildOperationDescriptor();
 }
