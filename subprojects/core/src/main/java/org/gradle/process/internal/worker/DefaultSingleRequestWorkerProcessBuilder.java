@@ -18,10 +18,8 @@ package org.gradle.process.internal.worker;
 
 import org.gradle.api.logging.LogLevel;
 import org.gradle.internal.classloader.ClasspathUtil;
-import org.gradle.internal.operations.OperationIdentifierRegistry;
 import org.gradle.internal.remote.ObjectConnection;
 import org.gradle.process.internal.JavaExecHandleBuilder;
-import org.gradle.process.internal.worker.request.OperationIdentifierProtocol;
 import org.gradle.process.internal.worker.request.Receiver;
 import org.gradle.process.internal.worker.request.RequestProtocol;
 import org.gradle.process.internal.worker.request.ResponseProtocol;
@@ -112,15 +110,10 @@ class DefaultSingleRequestWorkerProcessBuilder<PROTOCOL> implements SingleReques
                     workerProcess.start();
                     ObjectConnection connection = workerProcess.getConnection();
                     RequestProtocol requestProtocol = connection.addOutgoing(RequestProtocol.class);
-                    OperationIdentifierProtocol operationIdentifierProtocol = connection.addOutgoing(OperationIdentifierProtocol.class);
-
                     connection.addIncoming(ResponseProtocol.class, receiver);
                     connection.useJavaSerializationForParameters(workerImplementation.getClassLoader());
                     connection.connect();
-
-                    operationIdentifierProtocol.operationIdentifier(OperationIdentifierRegistry.getCurrentOperationIdentifier());
                     requestProtocol.runThenStop(method.getName(), method.getParameterTypes(), args);
-
                     boolean hasResult = receiver.awaitNextResult();
                     workerProcess.waitForStop();
                     if (!hasResult) {

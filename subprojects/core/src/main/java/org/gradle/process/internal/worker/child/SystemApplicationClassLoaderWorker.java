@@ -25,8 +25,6 @@ import org.gradle.internal.event.ListenerManager;
 import org.gradle.internal.io.ClassLoaderObjectInputStream;
 import org.gradle.internal.logging.LoggingManagerInternal;
 import org.gradle.internal.logging.services.LoggingServiceRegistry;
-import org.gradle.internal.operations.OperationIdentifier;
-import org.gradle.internal.operations.OperationIdentifierRegistry;
 import org.gradle.internal.remote.MessagingClient;
 import org.gradle.internal.remote.ObjectConnection;
 import org.gradle.internal.remote.internal.inet.MultiChoiceAddress;
@@ -46,7 +44,6 @@ import org.gradle.process.internal.health.memory.MemoryManager;
 import org.gradle.process.internal.health.memory.OsMemoryInfo;
 import org.gradle.process.internal.worker.WorkerLoggingSerializer;
 import org.gradle.process.internal.worker.WorkerJvmMemoryInfoSerializer;
-import org.gradle.process.internal.worker.request.OperationIdentifierProtocol;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -105,7 +102,6 @@ public class SystemApplicationClassLoaderWorker implements Callable<Void> {
 
             final ObjectConnection connection = messagingServices.get(MessagingClient.class).getConnection(serverAddress);
             workerLogEventListener = configureLogging(loggingManager, connection);
-            configureParentOperationIdentifier(connection);
             if (shouldPublishJvmMemoryInfo) {
                 configureWorkerJvmMemoryInfoEvents(workerServices, connection);
             }
@@ -141,15 +137,6 @@ public class SystemApplicationClassLoaderWorker implements Callable<Void> {
         WorkerLogEventListener workerLogEventListener = new WorkerLogEventListener(workerLoggingProtocol);
         loggingManager.addOutputEventListener(workerLogEventListener);
         return workerLogEventListener;
-    }
-
-    private void configureParentOperationIdentifier(ObjectConnection connection) {
-        connection.addIncoming(OperationIdentifierProtocol.class, new OperationIdentifierProtocol() {
-            @Override
-            public void operationIdentifier(OperationIdentifier operationIdentifier) {
-                OperationIdentifierRegistry.setParentOperationIdentifier(operationIdentifier);
-            }
-        });
     }
 
     private void configureWorkerJvmMemoryInfoEvents(WorkerServices services, ObjectConnection connection) {
