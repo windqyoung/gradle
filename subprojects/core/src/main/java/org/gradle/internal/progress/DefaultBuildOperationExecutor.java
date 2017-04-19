@@ -22,10 +22,11 @@ import org.gradle.api.Transformer;
 import org.gradle.internal.Transformers;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.concurrent.GradleThread;
-import org.gradle.internal.operations.OperationIdentifier;
 import org.gradle.internal.logging.progress.ProgressLogger;
 import org.gradle.internal.logging.progress.ProgressLoggerFactory;
 import org.gradle.internal.operations.BuildOperationContext;
+import org.gradle.internal.operations.BuildOperationIdentifierRegistry;
+import org.gradle.internal.operations.OperationIdentifier;
 import org.gradle.internal.time.TimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,6 +91,7 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         OperationDetails currentOperation = new OperationDetails(parent, id, operationDetails);
         currentOperation.setRunning(true);
         this.currentOperation.set(currentOperation);
+        BuildOperationIdentifierRegistry.setCurrentOperationIdentifier(id);
         try {
             long startTime = timeProvider.getCurrentTime();
             BuildOperationInternal operation = new BuildOperationInternal(id, parentId, operationDetails.getName(), operationDetails.getDisplayName(), operationDetails.getOperationDescriptor());
