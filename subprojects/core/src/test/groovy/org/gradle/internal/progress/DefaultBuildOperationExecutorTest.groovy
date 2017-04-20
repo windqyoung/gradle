@@ -261,22 +261,29 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
 
         when:
         operationExecutor.run(runnableBuildOperation("<main>") {
-            def parentOp = operationExecutor.currentOperation
-            parentId = parentOp.description.id
+            parentId = operationExecutor.currentOperationId
             async {
                 start {
-                    operationExecutor.setRootOperationOfCurrentThread(parentOp)
-                    operationExecutor.run(runnableBuildOperation("<thread-1>") {
-                        instant.action1Started
-                        thread.blockUntil.action2Started
+                    operationExecutor.run(new RunnableBuildOperation() {
+                        void run(BuildOperationContext context) {
+                            instant.action1Started
+                            thread.blockUntil.action2Started
+                        }
+                        BuildOperationDescriptor.Builder description() {
+                            displayName("<thread-1>").parentId(parentId)
+                        }
                     })
                 }
                 start {
                     thread.blockUntil.action1Started
-                    operationExecutor.setRootOperationOfCurrentThread(parentOp)
-                    operationExecutor.run(runnableBuildOperation("<thread-2>") {
-                        instant.action2Started
-                        thread.blockUntil.action1Finished
+                    operationExecutor.run(new RunnableBuildOperation() {
+                        void run(BuildOperationContext context) {
+                            instant.action2Started
+                            thread.blockUntil.action1Finished
+                        }
+                        BuildOperationDescriptor.Builder description() {
+                            displayName("<thread-2>").parentId(parentId)
+                        }
                     })
                 }
             }
@@ -319,31 +326,42 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
     }
 
     def "cannot start child operation when parent has completed"() {
-        def operation
+        def parentId = null
 
         given:
         operationExecutor.run(runnableBuildOperation("parent") {
-            operation = operationExecutor.currentOperation
+            parentId = operationExecutor.currentOperationId
         })
 
         when:
-        operationExecutor.execute(runnableBuildOperation("child") {}, operation)
+        operationExecutor.run(new RunnableBuildOperation() {
+            void run(BuildOperationContext context) {  }
+            BuildOperationDescriptor.Builder description() {
+                displayName("child").parentId(parentId)
+            }
+        })
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'Cannot start operation (child) as parent operation (parent) has already completed.'
+        e.message == 'Cannot start operation (child) as parent operation (0) has already completed.'
     }
 
     def "child fails when parent completes while child is still running"() {
         when:
         async {
             operationExecutor.run(runnableBuildOperation("parent") {
-                def operation = operationExecutor.currentOperation
+                def operation = operationExecutor.currentOperationId
                 start {
-                    operationExecutor.execute(runnableBuildOperation("child") {
-                        instant.childStarted
-                        thread.blockUntil.parentCompleted
-                    }, operation)
+                    operationExecutor.run(new RunnableBuildOperation() {
+                        void run(BuildOperationContext context) {
+                            instant.childStarted
+                            thread.blockUntil.parentCompleted
+                        }
+
+                        BuildOperationDescriptor.Builder description() {
+                            displayName("child").parentId(operation)
+                        }
+                    })
                 }
                 thread.blockUntil.childStarted
             })
@@ -352,7 +370,7 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
 
         then:
         def e = thrown(IllegalStateException)
-        e.message == 'Parent operation (parent) completed before this operation (child).'
+        e.message == 'Parent operation (0) completed before this operation (child).'
     }
 
     def "can query operation id from inside operation"() {
@@ -368,15 +386,15 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
 
         then:
         1 * parentOperation.run(_) >> {
-            assert operationExecutor.currentOperation.description.id != null
-            assert operationExecutor.currentOperation.description.parentId == null
-            id = operationExecutor.currentOperation.description.id
+            assert operationExecutor.currentOperationId != null
+            assert operationExecutor.currentParentOperationId == null
+            id = operationExecutor.currentOperationId
             operationExecutor.run(childOperation)
         }
         1 * childOperation.run(_) >> {
-            assert operationExecutor.currentOperation.description.id != null
-            assert operationExecutor.currentOperation.description.id != id
-            assert operationExecutor.currentOperation.description.parentId == id
+            assert operationExecutor.currentOperationId != null
+            assert operationExecutor.currentOperationId != id
+            assert operationExecutor.currentParentOperationId == id
         }
 
         cleanup:
@@ -395,7 +413,7 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
             thread.blockUntil.operationRunning
             GradleThread.setManaged()
             try {
-                operationExecutor.currentOperation.description
+                operationExecutor.currentOperationId
             } finally {
                 instant.queried
                 GradleThread.setUnmanaged()
@@ -407,12 +425,12 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
         e.message == "No operation is currently running."
     }
 
-    def "cannot query current operation description when no operation running on current unmanaged thread"() {
+    def "cannot query current operation id when no operation running on current unmanaged thread"() {
         when:
         BuildOperationDescriptor op
         async {
             assert !GradleThread.managed
-            op = operationExecutor.currentOperation.description
+            op = operationExecutor.currentOperationId
         }
 
         then:
@@ -428,8 +446,8 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
 
             operationExecutor.run(new RunnableBuildOperation() {
                 void run(BuildOperationContext outerContext) {
-                    assert operationExecutor.currentOperation.description != null
-                    assert operationExecutor.currentOperation.description.parentId.id < 0
+                    assert operationExecutor.currentOperationId != null
+                    assert operationExecutor.currentParentOperationId.id < 0
 
                     operationExecutor.run(new RunnableBuildOperation() {
                         void run(BuildOperationContext innerContext) {}

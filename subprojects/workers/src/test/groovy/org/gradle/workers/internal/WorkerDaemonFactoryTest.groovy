@@ -16,7 +16,7 @@
 
 package org.gradle.workers.internal
 
-import org.gradle.internal.operations.BuildOperationState
+import org.gradle.internal.logging.events.OperationIdentifier
 import org.gradle.internal.work.WorkerLeaseRegistry
 import org.gradle.internal.work.WorkerLeaseRegistry.WorkerLease
 import org.gradle.internal.operations.BuildOperationExecutor
@@ -32,7 +32,7 @@ class WorkerDaemonFactoryTest extends Specification {
     def buildOperationWorkerRegistry = Mock(WorkerLeaseRegistry)
     def buildOperationExecutor = Mock(BuildOperationExecutor)
     def workerOperation = Mock(WorkerLease)
-    def buildOperation = Mock(BuildOperationState)
+    def buildOperationId = Mock(OperationIdentifier)
 
     @Subject factory = new WorkerDaemonFactory(clientsManager, memoryManager, buildOperationWorkerRegistry, buildOperationExecutor)
 
@@ -55,6 +55,7 @@ class WorkerDaemonFactoryTest extends Specification {
 
         then:
         1 * buildOperationWorkerRegistry.getCurrentWorkerLease() >> workerOperation
+        1 * buildOperationExecutor.getCurrentOperationId() >> buildOperationId
 
         then:
         1 * clientsManager.reserveIdleClient(options) >> null
@@ -63,7 +64,7 @@ class WorkerDaemonFactoryTest extends Specification {
         1 * clientsManager.reserveNewClient(workerProtocolImplementation.class, workingDir, options) >> client
 
         then:
-        1 * client.execute(spec, workerOperation)
+        1 * client.execute(spec, workerOperation, buildOperationId)
 
         then:
         1 * clientsManager.release(client)
@@ -76,12 +77,13 @@ class WorkerDaemonFactoryTest extends Specification {
 
         then:
         1 * buildOperationWorkerRegistry.getCurrentWorkerLease() >> workerOperation
+        1 * buildOperationExecutor.getCurrentOperationId() >> buildOperationId
 
         then:
         1 * clientsManager.reserveIdleClient(options) >> client
 
         then:
-        1 * client.execute(spec, workerOperation)
+        1 * client.execute(spec, workerOperation, buildOperationId)
 
         then:
         1 * clientsManager.release(client)
@@ -94,12 +96,13 @@ class WorkerDaemonFactoryTest extends Specification {
 
         then:
         1 * buildOperationWorkerRegistry.getCurrentWorkerLease() >> workerOperation
+        1 * buildOperationExecutor.getCurrentOperationId() >> buildOperationId
 
         then:
         1 * clientsManager.reserveIdleClient(options) >> client
 
         then:
-        1 * client.execute(spec, workerOperation) >> { throw new RuntimeException("Boo!") }
+        1 * client.execute(spec, workerOperation, buildOperationId) >> { throw new RuntimeException("Boo!") }
 
         then:
         thrown(RuntimeException)

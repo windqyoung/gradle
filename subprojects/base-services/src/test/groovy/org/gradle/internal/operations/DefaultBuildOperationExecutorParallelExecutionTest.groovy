@@ -286,39 +286,43 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
     def "unmanaged thread operation is started and stopped when created by run"() {
         given:
         setupBuildOperationExecutor(2)
-        BuildOperationState operationState
+        def running = buildOperationExecutor.runningOperationIds
+        def operationState
 
         when:
         async {
             buildOperationExecutor.run(new DefaultBuildOperationQueueTest.TestBuildOperation() {
                 void run(BuildOperationContext context) {
-                    operationState = buildOperationExecutor.getCurrentOperation()
-                    assert operationState.running
-                    assert operationState.parent.running
-                    assert operationState.parent.description.id.id < 0
+                    operationState = buildOperationExecutor.currentOperation.get()
+                    def parentOperationId = operationState.description.parentId
+                    assert running.contains(operationState.description.id)
+                    assert running.contains(parentOperationId)
+                    assert parentOperationId.id < 0
                 }
             })
         }
 
         then:
         operationState != null
-        !operationState.running
-        !operationState.parent.running
+        !running.contains(operationState.description.id)
+        !running.contains(operationState.description.parentId)
     }
 
     def "unmanaged thread operation is started and stopped when created by call"() {
         given:
         setupBuildOperationExecutor(2)
-        BuildOperationState operationState
+        def running = buildOperationExecutor.runningOperationIds
+        def operationState
 
         when:
         async {
             buildOperationExecutor.call(new CallableBuildOperation() {
                 Object call(BuildOperationContext context) {
-                    operationState = buildOperationExecutor.getCurrentOperation()
-                    assert operationState.running
-                    assert operationState.parent.running
-                    assert operationState.parent.description.id.id < 0
+                    operationState = buildOperationExecutor.currentOperation.get()
+                    def parentOperationId = operationState.description.parentId
+                    assert running.contains(operationState.description.id)
+                    assert running.contains(parentOperationId)
+                    assert parentOperationId.id < 0
                     return null
                 }
 
@@ -330,15 +334,16 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
 
         then:
         operationState != null
-        !operationState.running
-        !operationState.parent.running
+        !running.contains(operationState.description.id)
+        !running.contains(operationState.description.parentId)
     }
 
     def "a single unmanaged thread operation is started and stopped when created by runAll"() {
         given:
         setupBuildOperationExecutor(2)
-        BuildOperationState operationState
-        BuildOperationState parentOperationState
+        def running = buildOperationExecutor.runningOperationIds
+        def operationState
+        def parentOperationId
 
         when:
         async {
@@ -346,12 +351,13 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
                 5.times {
                     queue.add(new DefaultBuildOperationQueueTest.TestBuildOperation() {
                         void run(BuildOperationContext context) {
-                            operationState = buildOperationExecutor.getCurrentOperation()
-                            assert parentOperationState == null || parentOperationState == operationState.parent
-                            parentOperationState = operationState.parent
-                            assert operationState.running
-                            assert parentOperationState.running
-                            assert operationState.parent.description.id.id < 0
+                            operationState = buildOperationExecutor.currentOperation.get()
+                            parentOperationId = operationState.description.parentId
+                            assert parentOperationId == null || parentOperationId == operationState.description.parentId
+                            parentOperationId = operationState.description.parentId
+                            assert running.contains(operationState.description.id)
+                            assert running.contains(parentOperationId)
+                            assert operationState.description.parentId.id < 0
                         }
                     })
                 }
@@ -360,7 +366,7 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
 
         then:
         operationState != null
-        !operationState.running
-        !operationState.parent.running
+        !running.contains(operationState.description.id)
+        !running.contains(operationState.description.parentId)
     }
 }

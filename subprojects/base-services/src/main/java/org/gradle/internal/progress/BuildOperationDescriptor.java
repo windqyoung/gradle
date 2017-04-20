@@ -95,7 +95,6 @@ public class BuildOperationDescriptor {
         private String name;
         private String progressDisplayName;
         private Object operationDescriptor;
-        private Object id;
         private Object parentId;
 
         private Builder(String displayName) {
@@ -118,18 +117,26 @@ public class BuildOperationDescriptor {
             return this;
         }
 
+        /**
+         * Define the parent of the operation by ID. Needs to be the ID of an operations that is running at the same time
+         * the described operation is running.
+         * If parent ID is not set, The last started operation of the current thread will be used as parent.
+         */
         public Builder parentId(Object parentId) {
             this.parentId = parentId;
             return this;
         }
 
-        public Builder id(Object id) {
-            this.id = id;
-            return this;
+        public BuildOperationInternal build() {
+            return build(null, null);
         }
 
-        public BuildOperationInternal build() {
-            return new BuildOperationInternal(id, parentId, name, displayName, progressDisplayName, operationDescriptor);
+        boolean hasParentId() {
+            return parentId != null;
+        }
+
+        BuildOperationInternal build(@Nullable Object id, @Nullable Object defaultParentId) {
+            return new BuildOperationInternal(id, parentId == null ? defaultParentId : parentId, name, displayName, progressDisplayName, operationDescriptor);
         }
     }
 }

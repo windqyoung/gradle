@@ -42,7 +42,6 @@ import org.gradle.internal.event.ListenerBroadcast;
 import org.gradle.internal.event.ListenerManager;
 import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.operations.BuildOperationExecutor;
-import org.gradle.internal.operations.BuildOperationState;
 import org.gradle.internal.operations.RunnableBuildOperation;
 import org.gradle.internal.progress.BuildOperationDescriptor;
 import org.gradle.internal.progress.OperationResult;
@@ -123,7 +122,7 @@ public class DefaultTaskGraphExecuter implements TaskGraphExecuter {
 
         graphListeners.getSource().graphPopulated(this);
         try {
-            taskPlanExecutor.process(taskExecutionPlan, new EventFiringTaskWorker(taskExecuter.create(), buildOperationExecutor.getCurrentOperation()));
+            taskPlanExecutor.process(taskExecutionPlan, new EventFiringTaskWorker(taskExecuter.create(), buildOperationExecutor.getCurrentOperationId()));
             LOGGER.debug("Timing: Executing the DAG took " + clock.getElapsed());
         } finally {
             taskExecutionPlan.clear();
@@ -227,22 +226,21 @@ public class DefaultTaskGraphExecuter implements TaskGraphExecuter {
      */
     private class EventFiringTaskWorker implements Action<TaskInternal> {
         private final TaskExecuter taskExecuter;
-        private final BuildOperationState parentOperation;
+        private final Object parentOperationId;
 
-        EventFiringTaskWorker(TaskExecuter taskExecuter, BuildOperationState parentOperation) {
+        EventFiringTaskWorker(TaskExecuter taskExecuter, Object parentOperationId) {
             this.taskExecuter = taskExecuter;
-            this.parentOperation = parentOperation;
+            this.parentOperationId = parentOperationId;
         }
 
         @Override
         public void execute(final TaskInternal task) {
-            buildOperationExecutor.setRootOperationOfCurrentThread(parentOperation);
             buildOperationExecutor.run(new RunnableBuildOperation() {
                 @Override
                 public void run(BuildOperationContext context) {
-                    final BuildOperationDescriptor currentOperation = buildOperationExecutor.getCurrentOperation().getDescription();
+                    final Object taskExecutionOperationId = buildOperationExecutor.getCurrentOperationId();
                     // These events are used by build scans
-                    TaskOperationInternal legacyOperation = new TaskOperationInternal(task, currentOperation.getId());
+                    TaskOperationInternal legacyOperation = new TaskOperationInternal(task, taskExecutionOperationId);
                     internalTaskListener.beforeExecute(legacyOperation, new OperationStartEvent(0));
                     TaskStateInternal state = task.getState();
                     taskListeners.getSource().beforeExecute(task);
@@ -255,7 +253,8 @@ public class DefaultTaskGraphExecuter implements TaskGraphExecuter {
                 @Override
                 public BuildOperationDescriptor.Builder description() {
                     TaskOperationDescriptor taskOperation = new TaskOperationDescriptor(task);
-                    return BuildOperationDescriptor.displayName("Task " + task.getIdentityPath()).name(task.getIdentityPath().toString()).operationDescriptor(taskOperation);
+                    return BuildOperationDescriptor.displayName("Task " + task.getIdentityPath()).name(task.getIdentityPath().toString()).
+                        operationDescriptor(taskOperation).parentId(parentOperationId);
                 }
             });
         }

@@ -49,13 +49,13 @@ public class WorkerDaemonFactory implements WorkerFactory, Stoppable {
     @Override
     public <T extends WorkSpec> Worker<T> getWorker(final Class<? extends WorkerProtocol<T>> workerImplementationClass, final File workingDir, final DaemonForkOptions forkOptions) {
         return new Worker<T>() {
-            public DefaultWorkResult execute(T spec, WorkerLease parentWorkerWorkerLease) {
+            public DefaultWorkResult execute(T spec, WorkerLease parentWorkerWorkerLease, Object parentBuildOperationId) {
                 WorkerDaemonClient<T> client = clientsManager.reserveIdleClient(forkOptions);
                 if (client == null) {
                     client = clientsManager.reserveNewClient(workerImplementationClass, workingDir, forkOptions);
                 }
                 try {
-                    return client.execute(spec, parentWorkerWorkerLease);
+                    return client.execute(spec, parentWorkerWorkerLease, parentBuildOperationId);
                 } finally {
                     clientsManager.release(client);
                 }
@@ -63,7 +63,7 @@ public class WorkerDaemonFactory implements WorkerFactory, Stoppable {
 
             @Override
             public DefaultWorkResult execute(T spec) {
-                return execute(spec, workerLeaseRegistry.getCurrentWorkerLease());
+                return execute(spec, workerLeaseRegistry.getCurrentWorkerLease(), buildOperationExecutor.getCurrentOperationId());
             }
         };
     }

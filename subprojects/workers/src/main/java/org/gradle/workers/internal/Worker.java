@@ -23,5 +23,5 @@ import org.gradle.internal.work.WorkerLeaseRegistry.WorkerLease;
  */
 public interface Worker<T extends WorkSpec> {
     DefaultWorkResult execute(T spec);
-    DefaultWorkResult execute(T spec, WorkerLease parentWorkerWorkerLease);
+    DefaultWorkResult execute(T spec, WorkerLease parentWorkerWorkerLease, final Object parentBuildOperationId);
 }

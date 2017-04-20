@@ -41,7 +41,7 @@ class WorkerDaemonClient<T extends WorkSpec> implements Worker<T>, Stoppable {
     }
 
     @Override
-    public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease) {
+    public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease, final Object parentBuildOperationId) {
         WorkerLeaseCompletion workerLease = parentWorkerWorkerLease.startChild();
         try {
             return buildOperationExecutor.call(new CallableBuildOperation<DefaultWorkResult>() {
@@ -53,7 +53,7 @@ class WorkerDaemonClient<T extends WorkSpec> implements Worker<T>, Stoppable {
 
                 @Override
                 public BuildOperationDescriptor.Builder description() {
-                    return BuildOperationDescriptor.displayName(spec.getDisplayName());
+                    return BuildOperationDescriptor.displayName(spec.getDisplayName()).parentId(parentBuildOperationId);
                 }
             });
         } finally {

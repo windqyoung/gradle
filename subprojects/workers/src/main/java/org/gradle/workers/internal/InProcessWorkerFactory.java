@@ -67,11 +67,11 @@ public class InProcessWorkerFactory implements WorkerFactory {
         return new Worker<T>() {
             @Override
             public DefaultWorkResult execute(T spec) {
-                return execute(spec, workerLeaseRegistry.getCurrentWorkerLease());
+                return execute(spec, workerLeaseRegistry.getCurrentWorkerLease(), buildOperationExecutor.getCurrentOperationId());
             }
 
             @Override
-            public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease) {
+            public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease, final Object parentBuildOperationId) {
                 WorkerLeaseRegistry.WorkerLeaseCompletion workerLease = parentWorkerWorkerLease.startChild();
                 try {
                     return buildOperationExecutor.call(new CallableBuildOperation<DefaultWorkResult>() {
@@ -82,7 +82,7 @@ public class InProcessWorkerFactory implements WorkerFactory {
 
                         @Override
                         public BuildOperationDescriptor.Builder description() {
-                            return BuildOperationDescriptor.displayName(spec.getDisplayName());
+                            return BuildOperationDescriptor.displayName(spec.getDisplayName()).parentId(parentBuildOperationId);
                         }
                     });
                 } finally {

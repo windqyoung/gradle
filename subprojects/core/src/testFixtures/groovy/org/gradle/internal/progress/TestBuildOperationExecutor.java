@@ -18,11 +18,11 @@ package org.gradle.internal.progress;
 
 import org.gradle.api.Action;
 import org.gradle.api.Nullable;
+import org.gradle.internal.logging.events.OperationIdentifier;
 import org.gradle.internal.operations.BuildOperation;
 import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.operations.BuildOperationExecutor;
 import org.gradle.internal.operations.BuildOperationQueue;
-import org.gradle.internal.operations.BuildOperationState;
 import org.gradle.internal.operations.BuildOperationWorker;
 import org.gradle.internal.operations.CallableBuildOperation;
 import org.gradle.internal.operations.RunnableBuildOperation;
@@ -36,16 +36,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class TestBuildOperationExecutor implements BuildOperationExecutor {
     public final List<BuildOperationDescriptor> operations = new CopyOnWriteArrayList<BuildOperationDescriptor>();
-    private BuildOperationState current = new BuildOperationState(BuildOperationDescriptor.displayName("current").build(), null, 0);
+    private OperationIdentifier id = new OperationIdentifier(0);
 
     @Override
-    public BuildOperationState getCurrentOperation() {
-        return current;
+    public Object getCurrentOperationId() {
+        return id;
     }
 
     @Override
-    public void setRootOperationOfCurrentThread(BuildOperationState buildOperationState) {
-        current = buildOperationState;
+    public Object getCurrentParentOperationId() {
+        return null;
     }
 
     @Override

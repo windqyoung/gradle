@@ -16,6 +16,7 @@
 
 package org.gradle.workers.internal
 
+import org.gradle.internal.logging.events.OperationIdentifier
 import org.gradle.internal.operations.BuildOperationContext
 import org.gradle.internal.operations.BuildOperationExecutor
 import org.gradle.internal.operations.CallableBuildOperation
@@ -26,6 +27,7 @@ import static org.gradle.internal.work.WorkerLeaseRegistry.WorkerLeaseCompletion
 
 class WorkerDaemonClientTest extends Specification {
     BuildOperationExecutor buildOperationExecutor = Mock(BuildOperationExecutor)
+    OperationIdentifier buildOperationId = Mock(OperationIdentifier)
     WorkerLease workerOperation = Mock(WorkerLease)
     WorkerLeaseCompletion completion = Mock(WorkerLeaseCompletion)
 
@@ -42,7 +44,7 @@ class WorkerDaemonClientTest extends Specification {
         client = client(workerDaemonProcess)
 
         when:
-        client.execute(Stub(WorkSpec), workerOperation)
+        client.execute(Stub(WorkSpec), workerOperation, buildOperationId)
 
         then:
         1 * buildOperationExecutor.call(_ as CallableBuildOperation) >> { args -> args[0].call(Mock(BuildOperationContext)) }
@@ -57,7 +59,7 @@ class WorkerDaemonClientTest extends Specification {
         assert client.uses == 0
 
         when:
-        5.times { client.execute(Stub(WorkSpec), workerOperation) }
+        5.times { client.execute(Stub(WorkSpec), workerOperation, buildOperationId) }
 
         then:
         5 * buildOperationExecutor.call(_ as CallableBuildOperation) >> { args -> args[0].call(Mock(BuildOperationContext)) }
@@ -74,7 +76,7 @@ class WorkerDaemonClientTest extends Specification {
         client = client()
 
         when:
-        client.execute(Stub(WorkSpec), operation)
+        client.execute(Stub(WorkSpec), operation, buildOperationId)
 
         then:
         1 * operation.startChild() >> completion
@@ -90,7 +92,7 @@ class WorkerDaemonClientTest extends Specification {
         client = client(workerDaemonProcess)
 
         when:
-        client.execute(Stub(WorkSpec), operation)
+        client.execute(Stub(WorkSpec), operation, buildOperationId)
 
         then:
         1 * operation.startChild() >> completion

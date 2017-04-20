@@ -18,6 +18,7 @@ package org.gradle.internal.operations;
 
 import net.jcip.annotations.ThreadSafe;
 import org.gradle.api.Action;
+import org.gradle.api.Nullable;
 import org.gradle.internal.progress.BuildOperationListener;
 
 /**
@@ -65,21 +66,17 @@ public interface BuildOperationExecutor {
     <O extends BuildOperation> void runAll(BuildOperationWorker<O> worker, Action<BuildOperationQueue<O>> schedulingAction);
 
     /**
-     * Returns the operation being run by the current thread.
-     *
-     * TODO remove this. It is needed to create parent/child relationships between operation created in different threads.
-     * Instead, threads should be created through the build operation executor and then the current operation of
-     * the creating thread can be automatically transferred to the new thread. This behavior is already implemented
-     * for runAll() in 'DefaultBuildOperationQueue' / 'DefaultBuildOperationExecutor.DefaultRunnableBuildOperationWorker'.
+     * Returns the id of the operation being run by the current thread.
      *
      * @throws IllegalStateException When the current thread is not executing an operation.
      */
-    BuildOperationState getCurrentOperation();
+    Object getCurrentOperationId();
 
     /**
-     * Sets the root operation of the current thread. Overrides previous setting.
+     * Returns the id of the parent on the operation being run by the current thread.
      *
-     * TODO Remove together with getCurrentOperation()
+     * @throws IllegalStateException When the current thread is not executing an operation.
      */
-    void setRootOperationOfCurrentThread(BuildOperationState buildOperationState);
+    @Nullable
+    Object getCurrentParentOperationId();
 }
