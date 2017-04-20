@@ -39,9 +39,7 @@ import org.gradle.api.internal.artifacts.ivyservice.resolveengine.graph.conflict
 import org.gradle.api.internal.artifacts.ivyservice.resolveengine.result.VersionSelectionReasons;
 import org.gradle.api.internal.attributes.AttributesSchemaInternal;
 import org.gradle.api.specs.Spec;
-import org.gradle.cache.internal.DefaultProducerGuard;
-import org.gradle.cache.internal.ProducerGuard;
-import org.gradle.internal.Factory;
+import org.gradle.internal.component.external.model.DefaultModuleComponentIdentifier;
 import org.gradle.internal.component.local.model.DslOriginDependencyMetadata;
 import org.gradle.internal.component.model.ComponentArtifactMetadata;
 import org.gradle.internal.component.model.ComponentResolveMetadata;
@@ -88,22 +86,6 @@ public class DependencyGraphBuilder {
     private final ImmutableModuleIdentifierFactory moduleIdentifierFactory;
     private final ModuleExclusions moduleExclusions;
     private final BuildOperationProcessor buildOperationProcessor;
-    private final ProducerGuard<ConcurrentDependencyEdgeResolutionLock> guard = new DefaultProducerGuard<ConcurrentDependencyEdgeResolutionLock>();
-
-    enum Step {
-        PICKED_NODE("picked", "0.0 1.0 1.0"),
-        VISITED_OUTGOING_DEPENDENCIES("visited outgoing", "0.1 0.8 1.0"),
-        RESOLVED_EDGES_CONCURRENTLY("resolved edges", "0.2 0.6 1.0"),
-        PERFORMED_SELECTION("performed selection", "0.3 1.0 1.0");
-
-        private final String displayName;
-        private final String color;
-
-        Step(String displayName, String color) {
-            this.displayName = displayName;
-            this.color = color;
-        }
-    }
 
     public DependencyGraphBuilder(DependencyToComponentIdResolver componentIdResolver, ComponentMetaDataResolver componentMetaDataResolver,
                                   ResolveContextToComponentResolver resolveContextToComponentResolver,
@@ -145,8 +127,7 @@ public class DependencyGraphBuilder {
     private void traverseGraph(final ResolveState resolveState) {
         resolveState.onMoreSelected(resolveState.root);
         final List<DependencyEdge> dependencies = Lists.newArrayList();
-        final List<DependencyEdge> dependenciesToBeResolvedSerially = Lists.newArrayList();
-        final List<DependencyEdge> dependenciesToBeResolvedInParallel = Lists.newArrayList();
+        final List<DependencyEdge> dependenciesMissingLocalMetadata = Lists.newArrayList();
 
         while (resolveState.peek() != null || conflictHandler.hasConflicts()) {
             if (resolveState.peek() != null) {
@@ -155,11 +136,10 @@ public class DependencyGraphBuilder {
 
                 // Calculate the outgoing edges of this configuration
                 dependencies.clear();
-                dependenciesToBeResolvedInParallel.clear();
-                dependenciesToBeResolvedSerially.clear();
+                dependenciesMissingLocalMetadata.clear();
                 node.visitOutgoingDependencies(dependencies);
 
-                resolveEdges(node, dependencies, dependenciesToBeResolvedSerially, dependenciesToBeResolvedInParallel, guard, resolveState);
+                resolveEdges(node, dependencies, dependenciesMissingLocalMetadata, resolveState);
 
             } else {
                 // We have some batched up conflicts. Resolve the first, and continue traversing the graph
@@ -187,10 +167,7 @@ public class DependencyGraphBuilder {
         if (moduleRevision.state == ModuleState.New) {
             ModuleResolveState module = resolveState.getModule(moduleId);
             // A new module revision. Check for conflict
-            PotentialConflict c;
-            synchronized (conflictHandler) {
-                c = conflictHandler.registerModule(module);
-            }
+            PotentialConflict c = conflictHandler.registerModule(module);
             if (!c.conflictExists()) {
                 // No conflict. Select it for now
                 LOGGER.debug("Selecting new module version {}", moduleRevision);
@@ -204,12 +181,10 @@ public class DependencyGraphBuilder {
                 // For each module participating in the conflict (many times there is only one participating module that has multiple versions)
                 c.withParticipatingModules(new Action<ModuleIdentifier>() {
                     public void execute(ModuleIdentifier module) {
-                        synchronized (conflictHandler) {
-                            ModuleVersionResolveState previouslySelected = resolveState.getModule(module).clearSelection();
-                            if (previouslySelected != null) {
-                                for (ConfigurationNode configuration : previouslySelected.configurations) {
-                                    configuration.deselect();
-                                }
+                        ModuleVersionResolveState previouslySelected = resolveState.getModule(module).clearSelection();
+                        if (previouslySelected != null) {
+                            for (ConfigurationNode configuration : previouslySelected.configurations) {
+                                configuration.deselect();
                             }
                         }
                     }
@@ -220,18 +195,19 @@ public class DependencyGraphBuilder {
 
     private void resolveEdges(final ConfigurationNode node,
                               final List<DependencyEdge> dependencies,
-                              final List<DependencyEdge> dependenciesToBeResolvedSerially,
-                              final List<DependencyEdge> dependenciesToBeResolvedInParallel,
-                              final ProducerGuard<ConcurrentDependencyEdgeResolutionLock> guard,
+                              final List<DependencyEdge> dependenciesMissingMetadataLocally,
                               final ResolveState resolveState) {
         if (dependencies.isEmpty()) {
             return;
         }
-        prepareForResolution(dependencies, dependenciesToBeResolvedSerially, dependenciesToBeResolvedInParallel);
+        computePreemptiveDownloadList(dependencies, dependenciesMissingMetadataLocally);
+        resolveEdgesSerially(dependencies, resolveState);
+        downloadMetadataConcurrently(node, dependenciesMissingMetadataLocally, resolveState);
+        attachToTargetRevisionsSerially(dependencies);
 
-        resolveEdgesSerially(dependenciesToBeResolvedSerially, resolveState);
-        resolveEdgesConcurrently(node, dependenciesToBeResolvedInParallel, guard, resolveState);
+    }
 
+    private void attachToTargetRevisionsSerially(List<DependencyEdge> dependencies) {
         // the following only needs to be done serially to preserve ordering of dependencies in the graph: we have visited the edges
         // but we still didn't add the result to the queue. Doing it from resolve threads would result in non-reproducible graphs, where
         // edges could be added in different order. To avoid this, the addition of new edges is done serially.
@@ -240,21 +216,18 @@ public class DependencyGraphBuilder {
                 dependency.attachToTargetConfigurations();
             }
         }
-
     }
 
-    private void resolveEdgesConcurrently(ConfigurationNode node, final List<DependencyEdge> dependencies, final ProducerGuard<ConcurrentDependencyEdgeResolutionLock> guard, final ResolveState resolveState) {
+    private void downloadMetadataConcurrently(ConfigurationNode node, final List<DependencyEdge> dependencies, final ResolveState resolveState) {
         if (dependencies.isEmpty()) {
             return;
         }
-        LOGGER.debug("Submitting {} dependency edges to resolve in parallel for {}", dependencies.size(), node);
+        LOGGER.debug("Submitting {} metadata files to resolve in parallel for {}", dependencies.size(), node);
         buildOperationProcessor.run(new Action<BuildOperationQueue<RunnableBuildOperation>>() {
             @Override
             public void execute(BuildOperationQueue<RunnableBuildOperation> buildOperationQueue) {
                 for (final DependencyEdge dependency : dependencies) {
-                    if (dependency.targetModuleRevision != null) {
-                        buildOperationQueue.add(new ResolveDependencyEdgeOperation(guard, dependency, resolveState));
-                    }
+                    buildOperationQueue.add(new DownloadMetadataOperation(dependency.targetModuleRevision));
                 }
             }
         });
@@ -276,23 +249,15 @@ public class DependencyGraphBuilder {
      *
      * @param dependencies the dependencies to be resolved  @return true if they should be resolved serially, false if they should be resolved concurrently
      * @param dependenciesToBeResolvedInParallel output, edges which will need parallel resolution
-     * @param dependenciesToBeResolvedSerially output, edges which will need serial resolution
      */
-    private void prepareForResolution(List<DependencyEdge> dependencies, List<DependencyEdge> dependenciesToBeResolvedSerially, List<DependencyEdge> dependenciesToBeResolvedInParallel) {
+    private void computePreemptiveDownloadList(List<DependencyEdge> dependencies, List<DependencyEdge> dependenciesToBeResolvedInParallel) {
         for (DependencyEdge dependency : dependencies) {
             ModuleVersionResolveState state = dependency.resolveModuleRevisionId();
             if (state != null) {
-                if (state.getMetadata() != null) {
-                    dependenciesToBeResolvedSerially.add(dependency);
-                } else {
+                if (!metaDataResolver.isAvailableLocally(DefaultModuleComponentIdentifier.newId(state.getId()))) {
                     dependenciesToBeResolvedInParallel.add(dependency);
                 }
             }
-        }
-        if (dependenciesToBeResolvedInParallel.size()==1) {
-            // no parallel download if a single dependency
-            dependenciesToBeResolvedSerially.addAll(dependenciesToBeResolvedInParallel);
-            dependenciesToBeResolvedInParallel.clear();
         }
     }
 
@@ -324,45 +289,6 @@ public class DependencyGraphBuilder {
         visitor.finish(resolveState.root);
     }
 
-    private static class ConcurrentDependencyEdgeResolutionLock {
-        private final String group;
-        private final String name;
-        private final int hashCode;
-
-        private ConcurrentDependencyEdgeResolutionLock(String group, String name) {
-            this.group = group;
-            this.name = name;
-            this.hashCode = 31 * group.hashCode() + name.hashCode();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
-            }
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            ConcurrentDependencyEdgeResolutionLock that = (ConcurrentDependencyEdgeResolutionLock) o;
-
-            if (!group.equals(that.group)) {
-                return false;
-            }
-            return name.equals(that.name);
-        }
-
-        @Override
-        public int hashCode() {
-            return hashCode;
-        }
-
-        @Override
-        public String toString() {
-            return "Lock for resolution of module " + group + ":" + name;
-        }
-    }
-
     /**
      * Represents the edges in the dependency graph.
      */
@@ -374,7 +300,6 @@ public class DependencyGraphBuilder {
         private final ResolveState resolveState;
         private final ModuleExclusion moduleExclusion;
         private final Set<ConfigurationNode> targetConfigurations = new LinkedHashSet<ConfigurationNode>();
-        private final ConcurrentDependencyEdgeResolutionLock lock;
 
         private ModuleVersionResolveState targetModuleRevision;
 
@@ -384,7 +309,6 @@ public class DependencyGraphBuilder {
             this.moduleExclusion = moduleExclusion;
             this.resolveState = resolveState;
             this.selector = resolveState.getSelector(dependencyMetadata);
-            this.lock = new ConcurrentDependencyEdgeResolutionLock(dependencyMetadata.getRequested().getGroup(), dependencyMetadata.getRequested().getName());
         }
 
         @Override
@@ -405,7 +329,7 @@ public class DependencyGraphBuilder {
         /**
          * @return The resolved module version
          */
-        public synchronized ModuleVersionResolveState resolveModuleRevisionId() {
+        public ModuleVersionResolveState resolveModuleRevisionId() {
             if (targetModuleRevision == null) {
                 targetModuleRevision = selector.resolveModuleRevisionId();
                 selector.getSelectedModule().addUnattachedDependency(this);
@@ -417,7 +341,7 @@ public class DependencyGraphBuilder {
             return from.isTransitive() && dependencyMetadata.isTransitive();
         }
 
-        public synchronized void attachToTargetConfigurations() {
+        public void attachToTargetConfigurations() {
             if (targetModuleRevision.state != ModuleState.Selected) {
                 return;
             }
@@ -430,7 +354,7 @@ public class DependencyGraphBuilder {
             }
         }
 
-        public synchronized void removeFromTargetConfigurations() {
+        public void removeFromTargetConfigurations() {
             for (ConfigurationNode targetConfiguration : targetConfigurations) {
                 targetConfiguration.removeIncomingEdge(this);
             }
@@ -440,7 +364,7 @@ public class DependencyGraphBuilder {
             }
         }
 
-        public synchronized void restart(ModuleVersionResolveState selected) {
+        public void restart(ModuleVersionResolveState selected) {
             removeFromTargetConfigurations();
             targetModuleRevision = selected;
             attachToTargetConfigurations();
@@ -554,7 +478,7 @@ public class DependencyGraphBuilder {
             root.moduleRevision.module.select(root.moduleRevision);
         }
 
-        public synchronized ModuleResolveState getModule(ModuleIdentifier id) {
+        public ModuleResolveState getModule(ModuleIdentifier id) {
             ModuleResolveState module = modules.get(id);
             if (module == null) {
                 module = new ModuleResolveState(idGenerator, id, this, metaDataResolver);
@@ -649,7 +573,7 @@ public class DependencyGraphBuilder {
         final Map<ModuleVersionIdentifier, ModuleVersionResolveState> versions = new LinkedHashMap<ModuleVersionIdentifier, ModuleVersionResolveState>();
         final Set<ModuleVersionSelectorResolveState> selectors = new HashSet<ModuleVersionSelectorResolveState>();
         final ResolveState resolveState;
-        volatile ModuleVersionResolveState selected;
+        ModuleVersionResolveState selected;
 
         private ModuleResolveState(IdGenerator<Long> idGenerator, ModuleIdentifier id, ResolveState resolveState, ComponentMetaDataResolver metaDataResolver) {
             this.idGenerator = idGenerator;
@@ -673,7 +597,7 @@ public class DependencyGraphBuilder {
             return versions.values();
         }
 
-        public synchronized void select(ModuleVersionResolveState selected) {
+        public void select(ModuleVersionResolveState selected) {
             assert this.selected == null;
             this.selected = selected;
             for (ModuleVersionResolveState version : versions.values()) {
@@ -682,7 +606,7 @@ public class DependencyGraphBuilder {
             selected.state = ModuleState.Selected;
         }
 
-        public synchronized ModuleVersionResolveState clearSelection() {
+        public ModuleVersionResolveState clearSelection() {
             ModuleVersionResolveState previousSelection = selected;
             selected = null;
             for (ModuleVersionResolveState version : versions.values()) {
@@ -691,7 +615,7 @@ public class DependencyGraphBuilder {
             return previousSelection;
         }
 
-        public synchronized void restart(ModuleVersionResolveState selected) {
+        public void restart(ModuleVersionResolveState selected) {
             select(selected);
             for (ModuleVersionResolveState version : versions.values()) {
                 version.restart(selected);
@@ -714,20 +638,16 @@ public class DependencyGraphBuilder {
         }
 
         public ModuleVersionResolveState getVersion(ModuleVersionIdentifier id) {
-            synchronized (versions) {
-                ModuleVersionResolveState moduleRevision = versions.get(id);
-                if (moduleRevision == null) {
-                    moduleRevision = new ModuleVersionResolveState(idGenerator.generateId(), this, id, metaDataResolver);
-                    versions.put(id, moduleRevision);
-                }
-                return moduleRevision;
+            ModuleVersionResolveState moduleRevision = versions.get(id);
+            if (moduleRevision == null) {
+                moduleRevision = new ModuleVersionResolveState(idGenerator.generateId(), this, id, metaDataResolver);
+                versions.put(id, moduleRevision);
             }
+            return moduleRevision;
         }
 
         public void addSelector(ModuleVersionSelectorResolveState selector) {
-            synchronized (selectors) {
-                selectors.add(selector);
-            }
+            selectors.add(selector);
         }
     }
 
@@ -1179,36 +1099,21 @@ public class DependencyGraphBuilder {
         }
     }
 
-    private class ResolveDependencyEdgeOperation implements RunnableBuildOperation {
-        private final ProducerGuard<ConcurrentDependencyEdgeResolutionLock> guard;
-        private final DependencyEdge dependency;
-        private final ResolveState resolveState;
+    private static class DownloadMetadataOperation implements RunnableBuildOperation {
+        private final ModuleVersionResolveState state;
 
-        public ResolveDependencyEdgeOperation(ProducerGuard<ConcurrentDependencyEdgeResolutionLock> guard, DependencyEdge dependency, ResolveState resolveState) {
-            this.guard = guard;
-            this.dependency = dependency;
-            this.resolveState = resolveState;
+        public DownloadMetadataOperation(ModuleVersionResolveState state) {
+            this.state = state;
         }
 
         @Override
         public void run() {
-            guard.guardByKey(dependency.lock, new Factory<Void>() {
-                @Override
-                public Void create() {
-                    // Resolve dependency to a particular revision
-                    ModuleVersionResolveState moduleRevision = dependency.targetModuleRevision;
-                    performSelection(resolveState, moduleRevision);
-                    // forcefully resolve metadata, so that it happens pre-emptively and concurrently
-                    // (this may trigger the download of metadata files, so do it concurrently if possible)
-                    moduleRevision.getMetaData();
-                    return null;
-                }
-            });
+            state.getMetaData();
         }
 
         @Override
         public String getDescription() {
-            return "Resolving " + dependency.toString();
+            return "Resolving " + state.toString();
         }
     }
 }

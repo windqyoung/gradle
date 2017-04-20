@@ -85,6 +85,13 @@ class ParallelDownloadsIntegrationTest extends AbstractHttpDependencyResolutionT
         noExceptionThrown()
         maxConcurrentRequests > 1
 
+        when:
+        maxConcurrentRequests = 0
+        run 'resolve'
+
+        then:
+        maxConcurrentRequests == 0
+
         where:
         repo << ['maven', 'ivy']
     }
