@@ -18,6 +18,7 @@ package org.gradle.nativeplatform.toolchain.internal;
 
 import com.google.common.base.Joiner;
 import org.gradle.internal.io.StreamByteBuffer;
+import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.os.OperatingSystem;
 import org.gradle.internal.progress.BuildOperationDescriptor;
 import org.gradle.process.internal.ExecAction;
@@ -50,7 +51,7 @@ public class DefaultCommandLineToolInvocationWorker implements CommandLineToolIn
     }
 
     @Override
-    public void execute(CommandLineToolInvocation invocation) {
+    public void execute(CommandLineToolInvocation invocation, BuildOperationContext context) {
         BuildOperationDescriptor description = invocation.description().build();
         ExecAction toolExec = execActionFactory.newExecAction();
 

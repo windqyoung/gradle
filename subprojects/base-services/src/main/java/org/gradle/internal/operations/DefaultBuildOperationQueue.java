@@ -40,7 +40,7 @@ class DefaultBuildOperationQueue<O extends BuildOperation> implements BuildOpera
     private final WorkerLeaseService workerLeases;
     private final WorkerLeaseRegistry.WorkerLease parentWorkerLease;
     private final ListeningExecutorService executor;
-    private final BuildOperationWorker<O> worker;
+    private final QueueWorker<O> queueWorker;
 
     private final List<QueuedOperation> operations;
 
@@ -49,11 +49,11 @@ class DefaultBuildOperationQueue<O extends BuildOperation> implements BuildOpera
     private final AtomicBoolean waitingForCompletion = new AtomicBoolean();
     private final AtomicBoolean canceled = new AtomicBoolean();
 
-    DefaultBuildOperationQueue(WorkerLeaseService workerLeases, ExecutorService executor, BuildOperationWorker<O> worker) {
+    DefaultBuildOperationQueue(WorkerLeaseService workerLeases, ExecutorService executor, QueueWorker<O> queueWorker) {
         this.workerLeases = workerLeases;
         this.parentWorkerLease = workerLeases.getWorkerLease();
         this.executor = MoreExecutors.listeningDecorator(executor);
-        this.worker = worker;
+        this.queueWorker = queueWorker;
         this.operations = Collections.synchronizedList(Lists.<QueuedOperation>newArrayList());
     }
 
@@ -182,7 +182,7 @@ class DefaultBuildOperationQueue<O extends BuildOperation> implements BuildOpera
             workerLeases.withLocks(parentWorkerLease.createChild()).execute(new Runnable() {
                 @Override
                 public void run() {
-                    worker.execute(operation);
+                    queueWorker.execute(operation);
                 }
             });
         }
@@ -196,7 +196,7 @@ class DefaultBuildOperationQueue<O extends BuildOperation> implements BuildOpera
             if (operationDescription == null) {
                 operationDescription = operation.description().build();
             }
-            return "Worker ".concat(worker.getDisplayName()).concat(" for operation ").concat(operationDescription.getDisplayName());
+            return "Worker ".concat(queueWorker.getDisplayName()).concat(" for operation ").concat(operationDescription.getDisplayName());
         }
     }
 }

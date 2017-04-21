@@ -49,7 +49,7 @@ class DefaultBuildOperationQueueTest extends Specification {
         }
     }
 
-    static class SimpleWorker implements BuildOperationWorker<TestBuildOperation> {
+    static class SimpleWorker implements BuildOperationQueue.QueueWorker<TestBuildOperation> {
         void execute(TestBuildOperation run) {
             run.run(null)
         }

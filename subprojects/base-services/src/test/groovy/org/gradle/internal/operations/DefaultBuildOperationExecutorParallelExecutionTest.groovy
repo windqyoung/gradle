@@ -50,6 +50,11 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
         outerOperation = workerRegistry.getCurrentWorkerLease()
     }
 
+    static class SimpleWorker implements BuildOperationWorker<DefaultBuildOperationQueueTest.TestBuildOperation> {
+        void execute(DefaultBuildOperationQueueTest.TestBuildOperation run, BuildOperationContext context) { run.run(context) }
+        String getDisplayName() { return getClass().simpleName }
+    }
+
     def "cleanup"() {
         if (outerOperationCompletion) {
             outerOperationCompletion.leaseFinish()
@@ -61,8 +66,8 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
     def "all #operations operations run to completion when using #maxThreads threads"() {
         given:
         setupBuildOperationExecutor(maxThreads)
-        def operation = Mock(DefaultBuildOperationQueueTest.TestBuildOperation)
-        def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def operation = Spy(DefaultBuildOperationQueueTest.Success)
+        def worker = new SimpleWorker()
 
         when:
         buildOperationExecutor.runAll(worker, { queue ->
@@ -90,14 +95,14 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
         given:
         def amountOfWork = 10
         setupBuildOperationExecutor(maxThreads)
-        def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def worker = new SimpleWorker()
         def numberOfQueues = 5
         def operations = [
-            Mock(DefaultBuildOperationQueueTest.TestBuildOperation),
-            Mock(DefaultBuildOperationQueueTest.TestBuildOperation),
-            Mock(DefaultBuildOperationQueueTest.TestBuildOperation),
-            Mock(DefaultBuildOperationQueueTest.TestBuildOperation),
-            Mock(DefaultBuildOperationQueueTest.TestBuildOperation),
+            Spy(DefaultBuildOperationQueueTest.Success),
+            Spy(DefaultBuildOperationQueueTest.Success),
+            Spy(DefaultBuildOperationQueueTest.Success),
+            Spy(DefaultBuildOperationQueueTest.Success),
+            Spy(DefaultBuildOperationQueueTest.Success)
         ]
 
         when:
@@ -129,11 +134,9 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
         def amountOfWork = 10
         def maxThreads = 4
         setupBuildOperationExecutor(maxThreads)
-        def success = Stub(DefaultBuildOperationQueueTest.TestBuildOperation)
-        def failure = Stub(DefaultBuildOperationQueueTest.TestBuildOperation) {
-            run(_) >> { throw new Exception() }
-        }
-        def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def success = new DefaultBuildOperationQueueTest.Success()
+        def failure = new DefaultBuildOperationQueueTest.Failure()
+        def worker = new SimpleWorker()
         boolean successfulQueueCompleted = false
         boolean exceptionInFailureQueue = false
 
@@ -178,7 +181,7 @@ class DefaultBuildOperationExecutorParallelExecutionTest extends ConcurrentSpec 
         given:
         def threadCount = 4
         setupBuildOperationExecutor(threadCount)
-        def worker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def worker = new SimpleWorker()
         def operation = Stub(DefaultBuildOperationQueueTest.TestBuildOperation) {
             run(_) >> {
                 throw new GradleException("always fails")

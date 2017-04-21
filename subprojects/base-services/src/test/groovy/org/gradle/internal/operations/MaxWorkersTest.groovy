@@ -35,7 +35,7 @@ class MaxWorkersTest extends ConcurrentSpec {
         def processor = new DefaultBuildOperationExecutor(
             Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
             new DefaultBuildOperationQueueFactory(registry), new DefaultExecutorFactory(), maxWorkers)
-        def processorWorker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def processorWorker = new SimpleWorker()
 
         when:
         async {
@@ -77,7 +77,7 @@ class MaxWorkersTest extends ConcurrentSpec {
         def processor = new DefaultBuildOperationExecutor(
             Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
             new DefaultBuildOperationQueueFactory(registry), new DefaultExecutorFactory(), maxWorkers)
-        def processorWorker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def processorWorker = new SimpleWorker()
 
         when:
         async {
@@ -119,7 +119,7 @@ class MaxWorkersTest extends ConcurrentSpec {
         def processor = new DefaultBuildOperationExecutor(
             Mock(BuildOperationListener), Mock(TimeProvider), Mock(ProgressLoggerFactory),
             new DefaultBuildOperationQueueFactory(registry), new DefaultExecutorFactory(), maxWorkers)
-        def processorWorker = new DefaultBuildOperationQueueTest.SimpleWorker()
+        def processorWorker = new SimpleWorker()
 
         when:
         def outer = registry.getWorkerLease().start()
@@ -152,5 +152,10 @@ class MaxWorkersTest extends ConcurrentSpec {
 
     WorkerLeaseRegistry buildOperationWorkerRegistry(int maxWorkers) {
         return new DefaultWorkerLeaseService(new DefaultResourceLockCoordinationService(), true, maxWorkers)
+    }
+
+    static class SimpleWorker implements BuildOperationWorker<DefaultBuildOperationQueueTest.TestBuildOperation> {
+        void execute(DefaultBuildOperationQueueTest.TestBuildOperation run, BuildOperationContext context) { run.run(context) }
+        String getDisplayName() { return getClass().simpleName }
     }
 }

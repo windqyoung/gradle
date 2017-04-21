@@ -22,7 +22,6 @@ import org.gradle.api.Action;
 import org.gradle.api.GradleException;
 import org.gradle.api.Nullable;
 import org.gradle.api.Transformer;
-import org.gradle.internal.Cast;
 import org.gradle.internal.SystemProperties;
 import org.gradle.internal.UncheckedException;
 import org.gradle.internal.concurrent.ExecutorFactory;
@@ -74,7 +73,6 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         this.fixedSizePool = executorFactory.create("build operations", maxWorkerCount);
     }
 
-
     @Override
     public BuildOperationState getCurrentOperation() {
         BuildOperationState current = currentOperation.get();
@@ -87,7 +85,7 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
     @Override
     public void run(RunnableBuildOperation buildOperation) {
         try {
-            execute(buildOperation);
+            execute(buildOperation, new RunnableBuildOperationWorker(), currentOperation.get());
         } finally {
             maybeStopUnmanagedThreadOperation();
         }
@@ -95,19 +93,19 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
 
     @Override
     public <T> T call(CallableBuildOperation<T> buildOperation) {
-        T result;
+        CallableBuildOperationWorker<T> worker = new CallableBuildOperationWorker<T>();
         try {
-            result = execute(buildOperation);
+            execute(buildOperation, worker, currentOperation.get());
         } finally {
             maybeStopUnmanagedThreadOperation();
         }
-        return result;
+        return worker.getReturnValue();
     }
 
     @Override
     public <O extends RunnableBuildOperation> void runAll(Action<BuildOperationQueue<O>> schedulingAction) {
         try {
-            executeInParallel(new ParentBuildOperationAwareWorker<O>(), schedulingAction);
+            executeInParallel(new ParentPreservingQueueWorker<O>(new RunnableBuildOperationWorker<O>()), schedulingAction);
         } finally {
             maybeStopUnmanagedThreadOperation();
         }
@@ -116,13 +114,13 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
     @Override
     public <O extends BuildOperation> void runAll(BuildOperationWorker<O> worker, Action<BuildOperationQueue<O>> schedulingAction) {
         try {
-            executeInParallel(worker, schedulingAction);
+            executeInParallel(new ParentPreservingQueueWorker<O>(worker), schedulingAction);
         } finally {
             maybeStopUnmanagedThreadOperation();
         }
     }
 
-    private <O extends BuildOperation> void executeInParallel(BuildOperationWorker<O> worker, Action<BuildOperationQueue<O>> queueAction) {
+    private <O extends BuildOperation> void executeInParallel(BuildOperationQueue.QueueWorker<O> worker, Action<BuildOperationQueue<O>> queueAction) {
         BuildOperationQueue<O> queue = buildOperationQueueFactory.create(fixedSizePool, worker);
 
         List<GradleException> failures = Lists.newArrayList();
@@ -146,14 +144,14 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         }
     }
 
-    private <T> T execute(BuildOperation buildOperation) {
+    private <O extends BuildOperation> void execute(O buildOperation, BuildOperationWorker<O> worker, @Nullable DefaultBuildOperationState defaultParent) {
         BuildOperationDescriptor.Builder descriptorBuilder = buildOperation.description();
         DefaultBuildOperationState parent = (DefaultBuildOperationState) descriptorBuilder.getParentState();
         if (parent == null) {
-            parent = currentOperation.get();
+            parent = defaultParent;
         }
 
-        BuildOperationDescriptor descriptor = createDescriptor(descriptorBuilder);
+        BuildOperationDescriptor descriptor = createDescriptor(descriptorBuilder, parent);
         DefaultBuildOperationState currentOperation = new DefaultBuildOperationState(descriptor, timeProvider.getCurrentTime());
 
         assertParentRunning("Cannot start operation (%s) as parent operation (%s) has already completed.", descriptor, parent);
@@ -166,7 +164,6 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         try {
             listener.started((BuildOperationInternal) descriptor, new OperationStartEvent(currentOperation.getStartTime()));
 
-            T result = null;
             Throwable failure = null;
             DefaultBuildOperationContext context = new DefaultBuildOperationContext();
             try {
@@ -174,12 +171,7 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
 
                 LOGGER.debug("Build operation '{}' started", descriptor.getDisplayName());
                 try {
-                    if (buildOperation instanceof RunnableBuildOperation) {
-                        ((RunnableBuildOperation) buildOperation).run(context);
-                    }
-                    if (buildOperation instanceof CallableBuildOperation) {
-                        result = Cast.uncheckedCast(((CallableBuildOperation) buildOperation).call(context));
-                    }
+                    worker.execute(buildOperation, context);
                 } finally {
                     if (progressLogger != null) {
                         progressLogger.completed();
@@ -199,16 +191,15 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
             }
 
             LOGGER.debug("Build operation '{}' completed", descriptor.getDisplayName());
-            return result;
         } finally {
             this.currentOperation.set(operationBefore);
             currentOperation.setRunning(false);
         }
     }
 
-    private BuildOperationDescriptor createDescriptor(BuildOperationDescriptor.Builder descriptorBuilder) {
+    private BuildOperationDescriptor createDescriptor(BuildOperationDescriptor.Builder descriptorBuilder, DefaultBuildOperationState parent) {
         OperationIdentifier id = new OperationIdentifier(nextId.getAndIncrement());
-        DefaultBuildOperationState current = maybeStartUnmanagedThreadOperation(descriptorBuilder.getParentState());
+        DefaultBuildOperationState current = maybeStartUnmanagedThreadOperation(parent);
         return descriptorBuilder.build(id, current == null ? null : current.getDescription().getId());
     }
 
@@ -236,15 +227,14 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         return currentOperation.getDescription().getProgressDisplayName() != null;
     }
 
-    private DefaultBuildOperationState maybeStartUnmanagedThreadOperation(BuildOperationState parentState) {
-        DefaultBuildOperationState operation = currentOperation.get();
-        if (!GradleThread.isManaged() && operation == null && parentState == null) {
-            operation = UnmanagedThreadOperation.create(timeProvider);
-            operation.setRunning(true);
-            currentOperation.set(operation);
-            listener.started((BuildOperationInternal) operation.getDescription(), new OperationStartEvent(operation.getStartTime()));
+    private DefaultBuildOperationState maybeStartUnmanagedThreadOperation(DefaultBuildOperationState parentState) {
+        if (!GradleThread.isManaged() && parentState == null) {
+            parentState = UnmanagedThreadOperation.create(timeProvider);
+            parentState.setRunning(true);
+            currentOperation.set(parentState);
+            listener.started((BuildOperationInternal) parentState.getDescription(), new OperationStartEvent(parentState.getStartTime()));
         }
-        return operation;
+        return parentState;
     }
 
     private void maybeStopUnmanagedThreadOperation() {
@@ -298,12 +288,48 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
         }
     }
 
-    private class ParentBuildOperationAwareWorker<O extends RunnableBuildOperation> implements BuildOperationWorker<O> {
+    private class RunnableBuildOperationWorker<O extends RunnableBuildOperation> implements BuildOperationWorker<O> {
+        @Override
+        public String getDisplayName() {
+            return "runnable build operation";
+        }
 
-        private BuildOperationState parent;
+        @Override
+        public void execute(O buildOperation, BuildOperationContext context) {
+            buildOperation.run(context);
+        }
+    }
 
-        private ParentBuildOperationAwareWorker() {
-            this.parent = maybeStartUnmanagedThreadOperation(null);
+    private class CallableBuildOperationWorker<T> implements BuildOperationWorker<CallableBuildOperation<T>> {
+        private T returnValue;
+
+        @Override
+        public String getDisplayName() {
+            return "callable build operation";
+        }
+
+        @Override
+        public void execute(CallableBuildOperation<T> buildOperation, BuildOperationContext context) {
+            returnValue = buildOperation.call(context);
+            System.out.print("");
+        }
+
+        public T getReturnValue() {
+            return returnValue;
+        }
+    }
+
+    /**
+     * Remembers the operation running on the executing thread at creation time to use
+     * it during execution on other threads.
+     */
+    private class ParentPreservingQueueWorker<O extends BuildOperation> implements BuildOperationQueue.QueueWorker<O> {
+        private DefaultBuildOperationState parent;
+        private BuildOperationWorker<O> worker;
+
+        private ParentPreservingQueueWorker(BuildOperationWorker<O> worker) {
+            this.parent = maybeStartUnmanagedThreadOperation(currentOperation.get());
+            this.worker = worker;
         }
 
         @Override
@@ -313,27 +339,7 @@ public class DefaultBuildOperationExecutor implements BuildOperationExecutor {
 
         @Override
         public void execute(O buildOperation) {
-            DefaultBuildOperationExecutor.this.execute(new ParentAwareBuildOperation<O>(buildOperation, parent));
-        }
-    }
-
-    private class ParentAwareBuildOperation<O extends RunnableBuildOperation> implements RunnableBuildOperation {
-        private O delegate;
-        private BuildOperationState parent;
-
-        private ParentAwareBuildOperation(O delegate, BuildOperationState parent) {
-            this.delegate = delegate;
-            this.parent = parent;
-        }
-
-        @Override
-        public void run(BuildOperationContext context) {
-            delegate.run(context);
-        }
-
-        @Override
-        public BuildOperationDescriptor.Builder description() {
-            return delegate.description().parent(parent);
+            DefaultBuildOperationExecutor.this.execute(buildOperation, worker, parent);
         }
     }
 
