@@ -94,7 +94,7 @@ public class BuildOperationDescriptor {
         private final String displayName;
         private String name;
         private String progressDisplayName;
-        private Object operationDescriptor;
+        private Object details;
         private Object parentId;
 
         private Builder(String displayName) {
@@ -112,8 +112,8 @@ public class BuildOperationDescriptor {
             return this;
         }
 
-        public Builder operationDescriptor(Object descriptor) {
-            this.operationDescriptor = descriptor;
+        public Builder details(Object details) {
+            this.details = details;
             return this;
         }
 
@@ -136,7 +136,7 @@ public class BuildOperationDescriptor {
         }
 
         BuildOperationInternal build(@Nullable Object id, @Nullable Object defaultParentId) {
-            return new BuildOperationInternal(id, parentId == null ? defaultParentId : parentId, name, displayName, progressDisplayName, operationDescriptor);
+            return new BuildOperationInternal(id, parentId == null ? defaultParentId : parentId, name, displayName, progressDisplayName, details);
         }
     }
 }

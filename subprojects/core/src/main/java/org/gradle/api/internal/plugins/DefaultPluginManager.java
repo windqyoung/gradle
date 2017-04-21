@@ -182,7 +182,7 @@ public class DefaultPluginManager implements PluginManagerInternal {
             identifier = pluginImplementation.asClass().getName();
         }
         String name = "Apply plugin " + identifier;
-        return BuildOperationDescriptor.displayName(name + " to " + target.toString()).name(name).operationDescriptor(pluginImplementation);
+        return BuildOperationDescriptor.displayName(name + " to " + target.toString()).name(name).details(pluginImplementation);
     }
 
     private Plugin<?> producePluginInstance(Class<?> pluginClass) {

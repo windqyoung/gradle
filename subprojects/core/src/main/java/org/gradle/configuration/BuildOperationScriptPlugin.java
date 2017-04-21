@@ -65,7 +65,7 @@ public class BuildOperationScriptPlugin implements ScriptPlugin {
                     File file = source.getResource().getFile();
                     String name = "Apply script " + (file != null ? file.getName() : source.getDisplayName());
                     String displayName = name + " to " + target;
-                    return BuildOperationDescriptor.displayName(displayName).name(name).operationDescriptor(source);
+                    return BuildOperationDescriptor.displayName(displayName).name(name).details(source);
                 }
             });
         }

@@ -229,7 +229,7 @@ public class DefaultGradleLauncher implements GradleLauncher {
         public BuildOperationDescriptor.Builder description() {
             StartParameter startParameter = gradle.getStartParameter();
             CalculateTaskGraphDescriptor calculateTaskGraphDescriptor = new CalculateTaskGraphDescriptor(startParameter.getTaskRequests(), startParameter.getExcludedTaskNames());
-            return BuildOperationDescriptor.displayName("Calculate task graph").operationDescriptor(calculateTaskGraphDescriptor);
+            return BuildOperationDescriptor.displayName("Calculate task graph").details(calculateTaskGraphDescriptor);
         }
     }
 

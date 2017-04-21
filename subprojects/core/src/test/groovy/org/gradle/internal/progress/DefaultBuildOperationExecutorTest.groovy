@@ -43,7 +43,7 @@ class DefaultBuildOperationExecutorTest extends ConcurrentSpec {
         def buildOperation = Mock(CallableBuildOperation)
         def progressLogger = Mock(ProgressLogger)
         def descriptor = "some-thing"
-        def operationDetailsBuilder = displayName("<some-operation>").name("<op>").progressDisplayName("<some-op>").operationDescriptor(descriptor)
+        def operationDetailsBuilder = displayName("<some-operation>").name("<op>").progressDisplayName("<some-op>").details(descriptor)
         def id
 
         when:
