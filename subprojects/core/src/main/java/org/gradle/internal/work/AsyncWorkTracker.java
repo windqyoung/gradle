@@ -16,6 +16,8 @@
 
 package org.gradle.internal.work;
 
+import org.gradle.internal.progress.BuildOperationState;
+
 /**
  * Allows asynchronous work to be tracked based on the build operation it is associated with.
  */
@@ -23,11 +25,11 @@ public interface AsyncWorkTracker {
     /**
      * Register a new item of asynchronous work with the provided build operation.
      *
-     * @param operationId - The id of the build operation to associate the asynchronous work with
+     * @param operation - The build operation to associate the asynchronous work with
      * @param completion - The completion of the asynchronous work
      * @throws IllegalStateException when new work is submitted for an operation while another thread is waiting in {@link #waitForCompletion(Operation)} for the same operation.
      */
-    void registerWork(Object operationId, AsyncWorkCompletion completion);
+    void registerWork(BuildOperationState operation, AsyncWorkCompletion completion);
 
     /**
      * Blocks waiting for the completion of all items of asynchronous work associated with the provided build operation.
@@ -35,7 +37,7 @@ public interface AsyncWorkTracker {
      * the asynchronous work, a {@link org.gradle.internal.exceptions.MultiCauseException} will be thrown with any exceptions
      * thrown.
      *
-     * @param operationId - The id of the build operation whose asynchronous work should be completed
+     * @param operation - The build operation whose asynchronous work should be completed
      */
-    void waitForCompletion(Object operationId);
+    void waitForCompletion(BuildOperationState operation);
 }

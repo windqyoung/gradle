@@ -36,16 +36,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class TestBuildOperationExecutor implements BuildOperationExecutor {
     public final List<BuildOperationDescriptor> operations = new CopyOnWriteArrayList<BuildOperationDescriptor>();
-    private OperationIdentifier id = new OperationIdentifier(0);
 
     @Override
-    public Object getCurrentOperationId() {
-        return id;
-    }
+    public BuildOperationState getCurrentOperation() {
+        return new BuildOperationState() {
+            @Override
+            public Object getId() {
+                return new OperationIdentifier(0);
+            }
 
-    @Override
-    public Object getCurrentParentOperationId() {
-        return null;
+            @Override
+            public Object getParentId() {
+                return null;
+            }
+        };
     }
 
     @Override

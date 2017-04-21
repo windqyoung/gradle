@@ -35,6 +35,7 @@ import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.internal.exceptions.MultiCauseException;
 import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.operations.BuildOperationExecutor;
+import org.gradle.internal.progress.BuildOperationState;
 import org.gradle.internal.operations.RunnableBuildOperation;
 import org.gradle.internal.progress.BuildOperationDescriptor;
 import org.gradle.internal.work.AsyncWorkTracker;
@@ -115,7 +116,7 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
 
             @Override
             public void run(BuildOperationContext context) {
-                Object currentOperationId = buildOperationExecutor.getCurrentOperationId();
+                BuildOperationState currentOperation = buildOperationExecutor.getCurrentOperation();
                 Throwable actionFailure = null;
                 try {
                     action.execute(task);
@@ -126,7 +127,7 @@ public class ExecuteActionsTaskExecuter implements TaskExecuter {
                 }
 
                 try {
-                    asyncWorkTracker.waitForCompletion(currentOperationId);
+                    asyncWorkTracker.waitForCompletion(currentOperation);
                 } catch (Throwable t) {
                     List<Throwable> failures = Lists.newArrayList();
 

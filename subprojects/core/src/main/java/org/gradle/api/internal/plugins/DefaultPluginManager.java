@@ -174,17 +174,6 @@ public class DefaultPluginManager implements PluginManagerInternal {
         adder.run();
     }
 
-    private BuildOperationDescriptor.Builder computeApplyPluginBuildOperationDetails(PluginImplementation<?> pluginImplementation) {
-        String identifier;
-        if (pluginImplementation.getPluginId() != null) {
-            identifier = pluginImplementation.getPluginId().toString();
-        } else {
-            identifier = pluginImplementation.asClass().getName();
-        }
-        String name = "Apply plugin " + identifier;
-        return BuildOperationDescriptor.displayName(name + " to " + target.toString()).name(name).details(pluginImplementation);
-    }
-
     private Plugin<?> producePluginInstance(Class<?> pluginClass) {
         // This insanity is needed for the case where someone calls pluginContainer.add(new SomePlugin())
         // That is, the plugin container has the instance that we want, but we don't think (we can't know) it has been applied
@@ -264,6 +253,17 @@ public class DefaultPluginManager implements PluginManagerInternal {
         @Override
         public BuildOperationDescriptor.Builder description() {
             return computeApplyPluginBuildOperationDetails(plugin);
+        }
+
+        private BuildOperationDescriptor.Builder computeApplyPluginBuildOperationDetails(PluginImplementation<?> pluginImplementation) {
+            String identifier;
+            if (pluginImplementation.getPluginId() != null) {
+                identifier = pluginImplementation.getPluginId().toString();
+            } else {
+                identifier = pluginImplementation.asClass().getName();
+            }
+            String name = "Apply plugin " + identifier;
+            return BuildOperationDescriptor.displayName(name + " to " + target.toString()).name(name).details(pluginImplementation);
         }
     }
 }

@@ -30,6 +30,7 @@ import org.gradle.internal.concurrent.ExecutorFactory;
 import org.gradle.internal.exceptions.Contextual;
 import org.gradle.internal.exceptions.DefaultMultiCauseException;
 import org.gradle.internal.operations.BuildOperationExecutor;
+import org.gradle.internal.progress.BuildOperationState;
 import org.gradle.internal.work.AsyncWorkCompletion;
 import org.gradle.internal.work.AsyncWorkTracker;
 import org.gradle.internal.work.WorkerLeaseRegistry;
@@ -85,14 +86,14 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
 
     private void submit(final ActionExecutionSpec spec, final File workingDir, final ForkMode fork, final DaemonForkOptions daemonForkOptions) {
         final WorkerLease currentWorkerWorkerLease = workerLeaseRegistry.getCurrentWorkerLease();
-        final Object currentBuildOperationId = buildOperationExecutor.getCurrentOperationId();
+        final BuildOperationState currentBuildOperation = buildOperationExecutor.getCurrentOperation();
         ListenableFuture<DefaultWorkResult> workerDaemonResult = executor.submit(new Callable<DefaultWorkResult>() {
             @Override
             public DefaultWorkResult call() throws Exception {
                 try {
                     WorkerFactory workerFactory = fork == ForkMode.ALWAYS ? workerDaemonFactory : workerInProcessFactory;
                     Worker<ActionExecutionSpec> worker = workerFactory.getWorker(WorkerDaemonServer.class, workingDir, daemonForkOptions);
-                    return worker.execute(spec, currentWorkerWorkerLease, currentBuildOperationId);
+                    return worker.execute(spec, currentWorkerWorkerLease, currentBuildOperation);
                 } catch (Throwable t) {
                     throw new WorkExecutionException(spec.getDisplayName(), t);
                 }
@@ -102,7 +103,7 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
     }
 
     void registerAsyncWork(final String description, final Future<DefaultWorkResult> workItem) {
-        asyncWorkTracker.registerWork(buildOperationExecutor.getCurrentOperationId(), new AsyncWorkCompletion() {
+        asyncWorkTracker.registerWork(buildOperationExecutor.getCurrentOperation(), new AsyncWorkCompletion() {
             @Override
             public void waitForCompletion() {
                 try {
@@ -126,8 +127,9 @@ public class DefaultWorkerExecutor implements WorkerExecutor {
 
     @Override
     public void await() throws WorkerExecutionException {
+        BuildOperationState currentOperation = buildOperationExecutor.getCurrentOperation();
         try {
-            asyncWorkTracker.waitForCompletion(buildOperationExecutor.getCurrentOperationId());
+            asyncWorkTracker.waitForCompletion(currentOperation);
         } catch (DefaultMultiCauseException e) {
             throw workerExecutionException(e.getCauses());
         }

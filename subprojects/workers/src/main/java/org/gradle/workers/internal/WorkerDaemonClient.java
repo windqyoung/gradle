@@ -19,6 +19,7 @@ package org.gradle.workers.internal;
 import org.gradle.internal.concurrent.Stoppable;
 import org.gradle.internal.operations.BuildOperationContext;
 import org.gradle.internal.operations.BuildOperationExecutor;
+import org.gradle.internal.progress.BuildOperationState;
 import org.gradle.internal.operations.CallableBuildOperation;
 import org.gradle.internal.progress.BuildOperationDescriptor;
 import org.gradle.internal.work.WorkerLeaseRegistry.WorkerLease;
@@ -41,7 +42,7 @@ class WorkerDaemonClient<T extends WorkSpec> implements Worker<T>, Stoppable {
     }
 
     @Override
-    public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease, final Object parentBuildOperationId) {
+    public DefaultWorkResult execute(final T spec, WorkerLease parentWorkerWorkerLease, final BuildOperationState parentBuildOperation) {
         WorkerLeaseCompletion workerLease = parentWorkerWorkerLease.startChild();
         try {
             return buildOperationExecutor.call(new CallableBuildOperation<DefaultWorkResult>() {
@@ -53,7 +54,7 @@ class WorkerDaemonClient<T extends WorkSpec> implements Worker<T>, Stoppable {
 
                 @Override
                 public BuildOperationDescriptor.Builder description() {
-                    return BuildOperationDescriptor.displayName(spec.getDisplayName()).parentId(parentBuildOperationId);
+                    return BuildOperationDescriptor.displayName(spec.getDisplayName()).parent(parentBuildOperation);
                 }
             });
         } finally {
